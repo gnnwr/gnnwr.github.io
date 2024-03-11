@@ -1,0 +1,1066 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>gnnwr.models &mdash; GNNWR 0.1.4 documentation</title>
+      <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="../../_static/documentation_options.js?v=fd825880"></script>
+        <script src="../../_static/doctools.js?v=888ff710"></script>
+        <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            GNNWR
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../gnnwr/datasets.html">gnnwr.datasets module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../gnnwr/models.html">gnnwr.models module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../gnnwr/networks.html">gnnwr.networks module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../gnnwr/utils.html">gnnwr.utils module</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">GNNWR</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">gnnwr.models</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for gnnwr.models</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">datetime</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">torch</span>
+<span class="kn">import</span> <span class="nn">torch.nn</span> <span class="k">as</span> <span class="nn">nn</span>
+<span class="kn">import</span> <span class="nn">torch.optim</span> <span class="k">as</span> <span class="nn">optim</span>
+<span class="kn">import</span> <span class="nn">warnings</span>
+<span class="kn">from</span> <span class="nn">sklearn.metrics</span> <span class="kn">import</span> <span class="n">r2_score</span>
+<span class="kn">from</span> <span class="nn">torch.utils.tensorboard</span> <span class="kn">import</span> <span class="n">SummaryWriter</span>  <span class="c1"># 用于保存训练过程</span>
+<span class="kn">from</span> <span class="nn">tqdm</span> <span class="kn">import</span> <span class="n">trange</span>
+<span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">OrderedDict</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">from</span> <span class="nn">.networks</span> <span class="kn">import</span> <span class="n">SWNN</span><span class="p">,</span> <span class="n">STPNN</span><span class="p">,</span> <span class="n">STNN_SPNN</span>
+<span class="kn">from</span> <span class="nn">.utils</span> <span class="kn">import</span> <span class="n">OLS</span><span class="p">,</span> <span class="n">DIAGNOSIS</span>
+
+
+<span class="c1"># 23.6.8_TODO: 寻找合适的优化器  考虑SGD+学习率调整  输出权重</span>
+<div class="viewcode-block" id="GNNWR">
+<a class="viewcode-back" href="../../gnnwr/models.html#gnnwr.models.GNNWR">[docs]</a>
+<span class="k">class</span> <span class="nc">GNNWR</span><span class="p">:</span>
+<span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    GNNWR(Geographically neural network weighted regression) is a model to address spatial non-stationarity in various domains with complex geographical processes,</span>
+<span class="sd">    which comes from the paper `Geographically neural network weighted regression for the accurate estimation of spatial non-stationarity &lt;https://doi.org/10.1080/13658816.2019.1707834&gt;`__.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    train_dataset : baseDataset</span>
+<span class="sd">        the dataset of training</span>
+<span class="sd">    valid_dataset : baseDataset</span>
+<span class="sd">        the dataset of validation</span>
+<span class="sd">    test_dataset : baseDataset</span>
+<span class="sd">        the dataset of testing</span>
+<span class="sd">    dense_layers : list</span>
+<span class="sd">        the dense layers of the model (default: ``None``)</span>
+
+<span class="sd">        Default structure is a geometric sequence of power of 2, the minimum is 2, and the maximum is the power of 2 closest to the number of neurons in the input layer.</span>
+<span class="sd">        </span>
+<span class="sd">        i.e. ``[2,4,8,16,32,64,128,256]``</span>
+<span class="sd">    start_lr : float</span>
+<span class="sd">        the start learning rate of the model (default: ``0.1``)</span>
+<span class="sd">    optimizer : str, optional</span>
+<span class="sd">        the optimizer of the model (default: ``&quot;Adagrad&quot;``)</span>
+<span class="sd">        choose from &quot;SGD&quot;,&quot;Adam&quot;,&quot;RMSprop&quot;,&quot;Adagrad&quot;,&quot;Adadelta&quot;</span>
+<span class="sd">    drop_out : float</span>
+<span class="sd">        the drop out rate of the model (default: ``0.2``)</span>
+<span class="sd">    batch_norm : bool, optional</span>
+<span class="sd">        whether use batch normalization (default: ``True``)</span>
+<span class="sd">    activate_func : torch.nn</span>
+<span class="sd">        the activate function of the model (default: ``nn.PReLU(init=0.4)``)</span>
+<span class="sd">    model_name : str</span>
+<span class="sd">        the name of the model (default: ``&quot;GNNWR_&quot; + datetime.datetime.today().strftime(&quot;%Y%m%d-%H%M%S&quot;)``)</span>
+<span class="sd">    model_save_path : str</span>
+<span class="sd">        the path of the model (default: ``&quot;../gnnwr_models&quot;``)</span>
+<span class="sd">    write_path : str</span>
+<span class="sd">        the path of the log (default: ``&quot;../gnnwr_runs/&quot; + datetime.datetime.now().strftime(&quot;%Y%m%d-%H%M%S&quot;)``)</span>
+<span class="sd">    use_gpu : bool</span>
+<span class="sd">        whether use gpu or not (default: ``True``)</span>
+<span class="sd">    use_ols : bool</span>
+<span class="sd">        whether use ols or not (default: ``True``)</span>
+<span class="sd">    log_path : str</span>
+<span class="sd">        the path of the log (default: ``&quot;../gnnwr_logs/&quot;``)</span>
+<span class="sd">    log_file_name : str</span>
+<span class="sd">        the name of the log (default: ``&quot;gnnwr&quot; + datetime.datetime.now().strftime(&quot;%Y%m%d-%H%M%S&quot;) + &quot;.log&quot;``)</span>
+<span class="sd">    log_level : int</span>
+<span class="sd">        the level of the log (default: ``logging.INFO``)</span>
+<span class="sd">    optimizer_params : dict, optional</span>
+<span class="sd">        the params of the optimizer and the scheduler (default: ``None``)</span>
+
+<span class="sd">        if optimizer is SGD, the params are:</span>
+
+<span class="sd">            | maxlr: float, the max learning rate (default: ``0.1``)</span>
+
+<span class="sd">            | minlr: float, the min learning rate (default: ``0.01``)</span>
+
+<span class="sd">            | upepoch: int, the epoch of learning rate up (default: ``10000``)</span>
+
+<span class="sd">            | decayepoch: int, the epoch of learning rate decay (default: ``20000``)</span>
+
+<span class="sd">            | decayrate: float, the rate of learning rate decay (default: ``0.1``)</span>
+
+<span class="sd">            | stop_change_epoch: int, the epoch of learning rate stop change (default: ``30000``)</span>
+
+<span class="sd">            | stop_lr: float, the learning rate when stop change (default: ``0.001``)</span>
+
+<span class="sd">        if optimizer is Other, the params are:</span>
+
+<span class="sd">            | scheduler: str, the name of the scheduler (default: ``&quot;CosineAnnealingWarmRestarts&quot;``) in {``&quot;MultiStepLR&quot;,&quot;CosineAnnealingLR&quot;,&quot;CosineAnnealingWarmRestarts&quot;``}</span>
+
+<span class="sd">            | scheduler_milestones: list, the milestones of the scheduler MultiStepLR (default: ``[500,1000,2000,4000]``)</span>
+
+<span class="sd">            | scheduler_gamma: float, the gamma of the scheduler MultiStepLR (default: ``0.5``)</span>
+
+<span class="sd">            | scheduler_T_max: int, the T_max of the scheduler CosineAnnealingLR (default: ``1000``)</span>
+
+<span class="sd">            | scheduler_eta_min: float, the eta_min of the scheduler CosineAnnealingLR and CosineAnnealingWarmRestarts (default: ``0.01``)</span>
+
+<span class="sd">            | scheduler_T_0: int, the T_0 of the scheduler CosineAnnealingWarmRestarts (default: ``100``)</span>
+
+<span class="sd">            | scheduler_T_mult: int, the T_mult of the scheduler CosineAnnealingWarmRestarts (default: ``3``)</span>
+
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+            <span class="bp">self</span><span class="p">,</span>
+            <span class="n">train_dataset</span><span class="p">,</span>
+            <span class="n">valid_dataset</span><span class="p">,</span>
+            <span class="n">test_dataset</span><span class="p">,</span>
+            <span class="n">dense_layers</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+            <span class="n">start_lr</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">.1</span><span class="p">,</span>
+            <span class="n">optimizer</span><span class="o">=</span><span class="s2">&quot;Adagrad&quot;</span><span class="p">,</span>
+            <span class="n">drop_out</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span>
+            <span class="n">batch_norm</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+            <span class="n">activate_func</span><span class="o">=</span><span class="n">nn</span><span class="o">.</span><span class="n">PReLU</span><span class="p">(</span><span class="n">init</span><span class="o">=</span><span class="mf">0.4</span><span class="p">),</span>
+            <span class="n">model_name</span><span class="o">=</span><span class="s2">&quot;GNNWR_&quot;</span> <span class="o">+</span> <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">today</span><span class="p">()</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">&quot;%Y%m</span><span class="si">%d</span><span class="s2">-%H%M%S&quot;</span><span class="p">),</span>
+            <span class="n">model_save_path</span><span class="o">=</span><span class="s2">&quot;../gnnwr_models&quot;</span><span class="p">,</span>
+            <span class="n">write_path</span><span class="o">=</span><span class="s2">&quot;../gnnwr_runs/&quot;</span> <span class="o">+</span> <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">&quot;%Y%m</span><span class="si">%d</span><span class="s2">-%H%M%S&quot;</span><span class="p">),</span>
+            <span class="n">use_gpu</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+            <span class="n">use_ols</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+            <span class="n">log_path</span><span class="o">=</span><span class="s2">&quot;../gnnwr_logs/&quot;</span><span class="p">,</span>
+            <span class="n">log_file_name</span><span class="o">=</span><span class="s2">&quot;gnnwr&quot;</span> <span class="o">+</span> <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">&quot;%Y%m</span><span class="si">%d</span><span class="s2">-%H%M%S&quot;</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot;.log&quot;</span><span class="p">,</span>
+            <span class="n">log_level</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">INFO</span><span class="p">,</span>
+            <span class="n">optimizer_params</span><span class="o">=</span><span class="kc">None</span>
+    <span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_train_dataset</span> <span class="o">=</span> <span class="n">train_dataset</span>  <span class="c1"># train dataset</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_valid_dataset</span> <span class="o">=</span> <span class="n">valid_dataset</span>  <span class="c1"># valid dataset</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_test_dataset</span> <span class="o">=</span> <span class="n">test_dataset</span>  <span class="c1"># test dataset</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_dense_layers</span> <span class="o">=</span> <span class="n">dense_layers</span>  <span class="c1"># structure of layers</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_start_lr</span> <span class="o">=</span> <span class="n">start_lr</span>  <span class="c1"># initial learning rate</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_insize</span> <span class="o">=</span> <span class="n">train_dataset</span><span class="o">.</span><span class="n">datasize</span>  <span class="c1"># size of input layer</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_outsize</span> <span class="o">=</span> <span class="n">train_dataset</span><span class="o">.</span><span class="n">coefsize</span>  <span class="c1"># size of output layer</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_writer</span> <span class="o">=</span> <span class="n">SummaryWriter</span><span class="p">(</span><span class="n">write_path</span><span class="p">)</span>  <span class="c1"># summary writer</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_drop_out</span> <span class="o">=</span> <span class="n">drop_out</span>  <span class="c1"># drop_out ratio</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_batch_norm</span> <span class="o">=</span> <span class="n">batch_norm</span>  <span class="c1"># batch normalization</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_activate_func</span> <span class="o">=</span> <span class="n">activate_func</span>  <span class="c1"># activate function , default: PRelu(0.4)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_model</span> <span class="o">=</span> <span class="n">SWNN</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_dense_layers</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_insize</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_outsize</span><span class="p">,</span>
+                           <span class="bp">self</span><span class="o">.</span><span class="n">_drop_out</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_activate_func</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_batch_norm</span><span class="p">)</span>  <span class="c1"># model</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_log_path</span> <span class="o">=</span> <span class="n">log_path</span>  <span class="c1"># log path</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_log_file_name</span> <span class="o">=</span> <span class="n">log_file_name</span>  <span class="c1"># log file</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_log_level</span> <span class="o">=</span> <span class="n">log_level</span>  <span class="c1"># log level</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__istrained</span> <span class="o">=</span> <span class="kc">False</span>  <span class="c1"># whether the model is trained</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_weight</span> <span class="o">=</span> <span class="n">OLS</span><span class="p">(</span>
+            <span class="n">train_dataset</span><span class="o">.</span><span class="n">scaledDataframe</span><span class="p">,</span> <span class="n">train_dataset</span><span class="o">.</span><span class="n">x</span><span class="p">,</span> <span class="n">train_dataset</span><span class="o">.</span><span class="n">y</span><span class="p">)</span><span class="o">.</span><span class="n">params</span>  <span class="c1"># OLS for weight</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_out</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_outsize</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">bias</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>  <span class="c1"># layer to multiply weight,coefficients, and model output</span>
+        <span class="k">if</span> <span class="n">use_ols</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_out</span><span class="o">.</span><span class="n">weight</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Parameter</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">_weight</span><span class="p">])</span><span class="o">.</span><span class="n">to</span><span class="p">(</span>
+                <span class="n">torch</span><span class="o">.</span><span class="n">float32</span><span class="p">),</span> <span class="n">requires_grad</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>  <span class="c1"># define the weight</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_out</span><span class="o">.</span><span class="n">weight</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Parameter</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_outsize</span><span class="p">)))</span><span class="o">.</span><span class="n">to</span><span class="p">(</span>
+                <span class="n">torch</span><span class="o">.</span><span class="n">float32</span><span class="p">),</span> <span class="n">requires_grad</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>  <span class="c1"># define the weight</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_criterion</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">MSELoss</span><span class="p">()</span>  <span class="c1"># loss function</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_trainLossList</span> <span class="o">=</span> <span class="p">[]</span>  <span class="c1"># record the loss in training process</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_validLossList</span> <span class="o">=</span> <span class="p">[]</span>  <span class="c1"># record the loss in validation process</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_epoch</span> <span class="o">=</span> <span class="mi">0</span>  <span class="c1"># current epoch</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_bestr2</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="s1">&#39;-inf&#39;</span><span class="p">)</span>  <span class="c1"># best r2</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_besttrainr2</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="s1">&#39;-inf&#39;</span><span class="p">)</span>  <span class="c1"># best train r2</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_noUpdateEpoch</span> <span class="o">=</span> <span class="mi">0</span>  <span class="c1"># number of epochs without update</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_modelName</span> <span class="o">=</span> <span class="n">model_name</span>  <span class="c1"># model name</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_modelSavePath</span> <span class="o">=</span> <span class="n">model_save_path</span>  <span class="c1"># model save path</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_train_diagnosis</span> <span class="o">=</span> <span class="kc">None</span>  <span class="c1"># diagnosis of training</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_test_diagnosis</span> <span class="o">=</span> <span class="kc">None</span>  <span class="c1"># diagnosis of test</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_valid_r2</span> <span class="o">=</span> <span class="kc">None</span>  <span class="c1"># r2 of validation</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">result_data</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_use_gpu</span> <span class="o">=</span> <span class="n">use_gpu</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_use_gpu</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">torch</span><span class="o">.</span><span class="n">cuda</span><span class="o">.</span><span class="n">is_available</span><span class="p">():</span>
+                <span class="n">devices</span> <span class="o">=</span> <span class="p">[</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">cuda</span><span class="o">.</span><span class="n">device_count</span><span class="p">())]</span>
+                <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s1">&#39;CUDA_VISIBLE_DEVICES&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;,&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="n">devices</span><span class="p">))</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_use_gpu</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_optimizer</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_scheduler</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_optimizer_name</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">init_optimizer</span><span class="p">(</span><span class="n">optimizer</span><span class="p">,</span> <span class="n">optimizer_params</span><span class="p">)</span>  <span class="c1"># initialize the optimizer</span>
+
+<div class="viewcode-block" id="GNNWR.init_optimizer">
+<a class="viewcode-back" href="../../gnnwr/models.html#gnnwr.models.GNNWR.init_optimizer">[docs]</a>
+    <span class="k">def</span> <span class="nf">init_optimizer</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">optimizer</span><span class="p">,</span> <span class="n">optimizer_params</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">        </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        initialize the optimizer</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        optimizer : str</span>
+<span class="sd">            the optimizer of the model (default: ``&quot;Adagrad&quot;``)</span>
+<span class="sd">            choose from &quot;SGD&quot;,&quot;Adam&quot;,&quot;RMSprop&quot;,&quot;Adagrad&quot;,&quot;Adadelta&quot;</span>
+<span class="sd">        optimizer_params : dict, optional</span>
+<span class="sd">            the params of the optimizer and the scheduler (default: ``None``)</span>
+
+<span class="sd">            if optimizer is SGD, the params are:</span>
+
+<span class="sd">                | maxlr: float, the max learning rate (default: ``0.1``)</span>
+
+<span class="sd">                | minlr: float, the min learning rate (default: ``0.01``)</span>
+
+<span class="sd">                | upepoch: int, the epoch of learning rate up (default: ``10000``)</span>
+
+<span class="sd">                | decayepoch: int, the epoch of learning rate decay (default: ``20000``)</span>
+
+<span class="sd">                | decayrate: float, the rate of learning rate decay (default: ``0.1``)</span>
+
+<span class="sd">                | stop_change_epoch: int, the epoch of learning rate stop change (default: ``30000``)</span>
+
+<span class="sd">                | stop_lr: float, the learning rate when stop change (default: ``0.001``)</span>
+
+<span class="sd">            if optimizer is Other, the params are:</span>
+
+<span class="sd">                | scheduler: str, the name of the scheduler (default: ``&quot;CosineAnnealingWarmRestarts&quot;``) in {``&quot;MultiStepLR&quot;,&quot;CosineAnnealingLR&quot;,&quot;CosineAnnealingWarmRestarts&quot;``}</span>
+
+<span class="sd">                | scheduler_milestones: list, the milestones of the scheduler MultiStepLR (default: ``[500,1000,2000,4000]``)</span>
+
+<span class="sd">                | scheduler_gamma: float, the gamma of the scheduler MultiStepLR (default: ``0.5``)</span>
+
+<span class="sd">                | scheduler_T_max: int, the T_max of the scheduler CosineAnnealingLR (default: ``1000``)</span>
+
+<span class="sd">                | scheduler_eta_min: float, the eta_min of the scheduler CosineAnnealingLR and CosineAnnealingWarmRestarts (default: ``0.01``)</span>
+
+<span class="sd">                | scheduler_T_0: int, the T_0 of the scheduler CosineAnnealingWarmRestarts (default: ``100``)</span>
+
+<span class="sd">                | scheduler_T_mult: int, the T_mult of the scheduler CosineAnnealingWarmRestarts (default: ``3``)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># initialize the optimizer</span>
+        <span class="k">if</span> <span class="n">optimizer</span> <span class="o">==</span> <span class="s2">&quot;SGD&quot;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_optimizer</span> <span class="o">=</span> <span class="n">optim</span><span class="o">.</span><span class="n">SGD</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_model</span><span class="o">.</span><span class="n">parameters</span><span class="p">(),</span> <span class="n">lr</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">momentum</span><span class="o">=</span><span class="mf">0.9</span><span class="p">,</span> <span class="n">weight_decay</span><span class="o">=</span><span class="mf">1e-3</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">optimizer</span> <span class="o">==</span> <span class="s2">&quot;Adam&quot;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_optimizer</span> <span class="o">=</span> <span class="n">optim</span><span class="o">.</span><span class="n">Adam</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_model</span><span class="o">.</span><span class="n">parameters</span><span class="p">(),</span> <span class="n">lr</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_start_lr</span><span class="p">,</span> <span class="n">weight_decay</span><span class="o">=</span><span class="mf">1e-3</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">optimizer</span> <span class="o">==</span> <span class="s2">&quot;RMSprop&quot;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_optimizer</span> <span class="o">=</span> <span class="n">optim</span><span class="o">.</span><span class="n">RMSprop</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_model</span><span class="o">.</span><span class="n">parameters</span><span class="p">(),</span> <span class="n">lr</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_start_lr</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">optimizer</span> <span class="o">==</span> <span class="s2">&quot;Adagrad&quot;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_optimizer</span> <span class="o">=</span> <span class="n">optim</span><span class="o">.</span><span class="n">Adagrad</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_model</span><span class="o">.</span><span class="n">parameters</span><span class="p">(),</span> <span class="n">lr</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_start_lr</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">optimizer</span> <span class="o">==</span> <span class="s2">&quot;Adadelta&quot;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_optimizer</span> <span class="o">=</span> <span class="n">optim</span><span class="o">.</span><span class="n">Adadelta</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_model</span><span class="o">.</span><span class="n">parameters</span><span class="p">(),</span> <span class="n">lr</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_start_lr</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Invalid Optimizer&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_optimizer_name</span> <span class="o">=</span> <span class="n">optimizer</span>  <span class="c1"># optimizer name</span>
+
+        <span class="c1"># lr scheduler</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_optimizer_name</span> <span class="o">==</span> <span class="s2">&quot;SGD&quot;</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">optimizer_params</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">optimizer_params</span> <span class="o">=</span> <span class="p">{}</span>
+            <span class="n">maxlr</span> <span class="o">=</span> <span class="n">optimizer_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;maxlr&quot;</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">)</span>
+            <span class="n">minlr</span> <span class="o">=</span> <span class="n">optimizer_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;minlr&quot;</span><span class="p">,</span> <span class="mf">0.01</span><span class="p">)</span>
+            <span class="n">upepoch</span> <span class="o">=</span> <span class="n">optimizer_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;upepoch&quot;</span><span class="p">,</span> <span class="mi">10000</span><span class="p">)</span>
+            <span class="n">uprate</span> <span class="o">=</span> <span class="p">(</span><span class="n">maxlr</span> <span class="o">-</span> <span class="n">minlr</span><span class="p">)</span> <span class="o">/</span> <span class="n">upepoch</span> <span class="o">*</span> <span class="p">(</span><span class="n">upepoch</span> <span class="o">//</span> <span class="mi">20</span><span class="p">)</span>
+            <span class="n">decayepoch</span> <span class="o">=</span> <span class="n">optimizer_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;decayepoch&quot;</span><span class="p">,</span> <span class="mi">20000</span><span class="p">)</span>
+            <span class="n">decayrate</span> <span class="o">=</span> <span class="n">optimizer_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;decayrate&quot;</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">)</span>
+            <span class="n">stop_change_epoch</span> <span class="o">=</span> <span class="n">optimizer_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;stop_change_epoch&quot;</span><span class="p">,</span> <span class="mi">30000</span><span class="p">)</span>
+            <span class="n">stop_lr</span> <span class="o">=</span> <span class="n">optimizer_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;stop_lr&quot;</span><span class="p">,</span> <span class="mf">0.001</span><span class="p">)</span>
+            <span class="n">lamda_lr</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">epoch</span><span class="p">:</span> <span class="p">(</span><span class="n">epoch</span> <span class="o">//</span> <span class="p">(</span><span class="n">upepoch</span> <span class="o">//</span> <span class="mi">20</span><span class="p">))</span> <span class="o">*</span> <span class="n">uprate</span> <span class="o">+</span> <span class="n">minlr</span> <span class="k">if</span> <span class="n">epoch</span> <span class="o">&lt;</span> <span class="n">upepoch</span> <span class="k">else</span> <span class="p">(</span>
+                <span class="n">maxlr</span> <span class="k">if</span> <span class="n">epoch</span> <span class="o">&lt;</span> <span class="n">decayepoch</span> <span class="k">else</span> <span class="n">maxlr</span> <span class="o">*</span> <span class="p">(</span><span class="n">decayrate</span> <span class="o">**</span> <span class="p">(</span><span class="n">epoch</span> <span class="o">-</span> <span class="n">decayepoch</span><span class="p">)))</span> <span class="k">if</span> <span class="n">epoch</span> <span class="o">&lt;</span> <span class="n">stop_change_epoch</span> <span class="k">else</span> <span class="n">stop_lr</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_scheduler</span> <span class="o">=</span> <span class="n">optim</span><span class="o">.</span><span class="n">lr_scheduler</span><span class="o">.</span><span class="n">LambdaLR</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_optimizer</span><span class="p">,</span> <span class="n">lr_lambda</span><span class="o">=</span><span class="n">lamda_lr</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">optimizer_params</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">optimizer_params</span> <span class="o">=</span> <span class="p">{}</span>
+            <span class="n">scheduler</span> <span class="o">=</span> <span class="n">optimizer_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;scheduler&quot;</span><span class="p">,</span> <span class="s2">&quot;CosineAnnealingWarmRestarts&quot;</span><span class="p">)</span>
+            <span class="n">scheduler_milestones</span> <span class="o">=</span> <span class="n">optimizer_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
+                <span class="s2">&quot;scheduler_milestones&quot;</span><span class="p">,</span> <span class="p">[</span><span class="mi">500</span><span class="p">,</span> <span class="mi">1000</span><span class="p">,</span> <span class="mi">2000</span><span class="p">,</span> <span class="mi">4000</span><span class="p">])</span>
+            <span class="n">scheduler_gamma</span> <span class="o">=</span> <span class="n">optimizer_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;scheduler_gamma&quot;</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">)</span>
+            <span class="n">scheduler_T_max</span> <span class="o">=</span> <span class="n">optimizer_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;scheduler_T_max&quot;</span><span class="p">,</span> <span class="mi">1000</span><span class="p">)</span>
+            <span class="n">scheduler_eta_min</span> <span class="o">=</span> <span class="n">optimizer_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;scheduler_eta_min&quot;</span><span class="p">,</span> <span class="mf">0.01</span><span class="p">)</span>
+            <span class="n">scheduler_T_0</span> <span class="o">=</span> <span class="n">optimizer_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;scheduler_T_0&quot;</span><span class="p">,</span> <span class="mi">100</span><span class="p">)</span>
+            <span class="n">scheduler_T_mult</span> <span class="o">=</span> <span class="n">optimizer_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;scheduler_T_mult&quot;</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">scheduler</span> <span class="o">==</span> <span class="s2">&quot;MultiStepLR&quot;</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_scheduler</span> <span class="o">=</span> <span class="n">optim</span><span class="o">.</span><span class="n">lr_scheduler</span><span class="o">.</span><span class="n">MultiStepLR</span><span class="p">(</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_optimizer</span><span class="p">,</span> <span class="n">milestones</span><span class="o">=</span><span class="n">scheduler_milestones</span><span class="p">,</span> <span class="n">gamma</span><span class="o">=</span><span class="n">scheduler_gamma</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">scheduler</span> <span class="o">==</span> <span class="s2">&quot;CosineAnnealingLR&quot;</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_scheduler</span> <span class="o">=</span> <span class="n">optim</span><span class="o">.</span><span class="n">lr_scheduler</span><span class="o">.</span><span class="n">CosineAnnealingLR</span><span class="p">(</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_optimizer</span><span class="p">,</span> <span class="n">T_max</span><span class="o">=</span><span class="n">scheduler_T_max</span><span class="p">,</span> <span class="n">eta_min</span><span class="o">=</span><span class="n">scheduler_eta_min</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">scheduler</span> <span class="o">==</span> <span class="s2">&quot;CosineAnnealingWarmRestarts&quot;</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_scheduler</span> <span class="o">=</span> <span class="n">optim</span><span class="o">.</span><span class="n">lr_scheduler</span><span class="o">.</span><span class="n">CosineAnnealingWarmRestarts</span><span class="p">(</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_optimizer</span><span class="p">,</span> <span class="n">T_0</span><span class="o">=</span><span class="n">scheduler_T_0</span><span class="p">,</span> <span class="n">T_mult</span><span class="o">=</span><span class="n">scheduler_T_mult</span><span class="p">,</span> <span class="n">eta_min</span><span class="o">=</span><span class="n">scheduler_eta_min</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Invalid Scheduler&quot;</span><span class="p">)</span></div>
+
+
+    <span class="k">def</span> <span class="nf">__train</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        train the network</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_model</span><span class="o">.</span><span class="n">train</span><span class="p">()</span>  <span class="c1"># set the model to train mode</span>
+        <span class="n">train_loss</span> <span class="o">=</span> <span class="mi">0</span>  <span class="c1"># initialize the loss</span>
+        <span class="n">data_loader</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_train_dataset</span><span class="o">.</span><span class="n">dataloader</span>  <span class="c1"># get the data loader</span>
+        <span class="n">weight_all</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">([])</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+        <span class="n">x_true</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">([])</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+        <span class="n">y_true</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">([])</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+        <span class="n">y_pred</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">([])</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">coef</span><span class="p">,</span> <span class="n">label</span><span class="p">,</span> <span class="n">data_index</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">data_loader</span><span class="p">):</span>
+            <span class="c1"># move the data to gpu</span>
+            <span class="n">device</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">(</span><span class="s1">&#39;cuda&#39;</span><span class="p">)</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_use_gpu</span> <span class="k">else</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">(</span><span class="s1">&#39;cpu&#39;</span><span class="p">)</span>
+            <span class="n">data</span><span class="p">,</span> <span class="n">coef</span><span class="p">,</span> <span class="n">label</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">),</span> <span class="n">coef</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">),</span> <span class="n">label</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+            <span class="n">weight_all</span><span class="p">,</span> <span class="n">x_true</span><span class="p">,</span> <span class="n">y_true</span><span class="p">,</span> <span class="n">y_pred</span> <span class="o">=</span> <span class="n">weight_all</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">),</span> <span class="n">x_true</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">),</span> <span class="n">y_true</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">),</span> <span class="n">y_pred</span><span class="o">.</span><span class="n">to</span><span class="p">(</span>
+                <span class="n">device</span><span class="p">)</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">_optimizer</span><span class="o">.</span><span class="n">zero_grad</span><span class="p">()</span>  <span class="c1"># zero the gradient</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_optimizer_name</span> <span class="o">==</span> <span class="s2">&quot;Adagrad&quot;</span><span class="p">:</span>
+                <span class="c1"># move optimizer state to gpu</span>
+                <span class="k">for</span> <span class="n">state</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_optimizer</span><span class="o">.</span><span class="n">state</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
+                    <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">state</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">):</span>
+                            <span class="n">state</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">v</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+
+            <span class="n">x_true</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">((</span><span class="n">x_true</span><span class="p">,</span> <span class="n">coef</span><span class="p">),</span> <span class="mi">0</span><span class="p">)</span>
+            <span class="n">y_true</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">((</span><span class="n">y_true</span><span class="p">,</span> <span class="n">label</span><span class="p">),</span> <span class="mi">0</span><span class="p">)</span>
+            <span class="n">weight</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_model</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+            <span class="n">weight_all</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">((</span><span class="n">weight_all</span><span class="p">,</span> <span class="n">weight</span><span class="o">.</span><span class="n">mul</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_weight</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">))),</span> <span class="mi">0</span><span class="p">)</span>
+            <span class="n">output</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_out</span><span class="p">(</span><span class="n">weight</span><span class="o">.</span><span class="n">mul</span><span class="p">(</span><span class="n">coef</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">float32</span><span class="p">)))</span>
+            <span class="n">y_pred</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">((</span><span class="n">y_pred</span><span class="p">,</span> <span class="n">output</span><span class="p">),</span> <span class="mi">0</span><span class="p">)</span>
+            <span class="n">loss</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_criterion</span><span class="p">(</span><span class="n">output</span><span class="p">,</span> <span class="n">label</span><span class="p">)</span>  <span class="c1"># calculate the loss</span>
+            <span class="n">loss</span><span class="o">.</span><span class="n">backward</span><span class="p">()</span>  <span class="c1"># back propagation</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_optimizer</span><span class="o">.</span><span class="n">step</span><span class="p">()</span>  <span class="c1"># update the parameters</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+                <span class="n">train_loss</span> <span class="o">+=</span> <span class="n">loss</span><span class="o">.</span><span class="n">item</span><span class="p">()</span> <span class="o">*</span> <span class="n">data</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">train_loss</span> <span class="o">+=</span> <span class="n">loss</span><span class="o">.</span><span class="n">item</span><span class="p">()</span> <span class="o">*</span> <span class="n">data</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>  <span class="c1"># accumulate the loss</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_train_diagnosis</span> <span class="o">=</span> <span class="n">DIAGNOSIS</span><span class="p">(</span><span class="n">weight_all</span><span class="p">,</span> <span class="n">x_true</span><span class="p">,</span> <span class="n">y_true</span><span class="p">,</span> <span class="n">y_pred</span><span class="p">)</span>
+        <span class="n">train_loss</span> <span class="o">/=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_train_dataset</span><span class="o">.</span><span class="n">datasize</span>  <span class="c1"># calculate the average loss</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_trainLossList</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">train_loss</span><span class="p">)</span>  <span class="c1"># record the loss</span>
+
+    <span class="k">def</span> <span class="nf">__valid</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        validate the network</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_model</span><span class="o">.</span><span class="n">eval</span><span class="p">()</span>  <span class="c1"># set the model to validation mode</span>
+        <span class="n">val_loss</span> <span class="o">=</span> <span class="mi">0</span>  <span class="c1"># initialize the loss</span>
+        <span class="n">label_list</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([])</span>  <span class="c1"># label list</span>
+        <span class="n">out_list</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([])</span>  <span class="c1"># output list</span>
+        <span class="n">data_loader</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_valid_dataset</span><span class="o">.</span><span class="n">dataloader</span>  <span class="c1"># get the data loader</span>
+
+        <span class="k">with</span> <span class="n">torch</span><span class="o">.</span><span class="n">no_grad</span><span class="p">():</span>  <span class="c1"># disable gradient calculation</span>
+            <span class="k">for</span> <span class="n">data</span><span class="p">,</span> <span class="n">coef</span><span class="p">,</span> <span class="n">label</span><span class="p">,</span> <span class="n">data_index</span> <span class="ow">in</span> <span class="n">data_loader</span><span class="p">:</span>
+                <span class="n">device</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">(</span><span class="s1">&#39;cuda&#39;</span><span class="p">)</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_use_gpu</span> <span class="k">else</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">(</span><span class="s1">&#39;cpu&#39;</span><span class="p">)</span>
+                <span class="n">data</span><span class="p">,</span> <span class="n">coef</span><span class="p">,</span> <span class="n">label</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">),</span> <span class="n">coef</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">),</span> <span class="n">label</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+                <span class="c1"># weight = self._model(data)</span>
+                <span class="n">output</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_out</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_model</span><span class="p">(</span>
+                    <span class="n">data</span><span class="p">)</span><span class="o">.</span><span class="n">mul</span><span class="p">(</span><span class="n">coef</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">float32</span><span class="p">)))</span>
+                <span class="n">loss</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_criterion</span><span class="p">(</span><span class="n">output</span><span class="p">,</span> <span class="n">label</span><span class="p">)</span>  <span class="c1"># calculate the loss</span>
+                <span class="n">out_list</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                    <span class="n">out_list</span><span class="p">,</span> <span class="n">output</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">cpu</span><span class="p">()</span><span class="o">.</span><span class="n">detach</span><span class="p">()</span><span class="o">.</span><span class="n">numpy</span><span class="p">())</span>  <span class="c1"># add the output to the list</span>
+                <span class="n">label_list</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                    <span class="n">label_list</span><span class="p">,</span> <span class="n">label</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">cpu</span><span class="p">()</span><span class="o">.</span><span class="n">numpy</span><span class="p">())</span>  <span class="c1"># add the label to the list</span>
+                <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+                    <span class="n">val_loss</span> <span class="o">+=</span> <span class="n">loss</span><span class="o">.</span><span class="n">item</span><span class="p">()</span> <span class="o">*</span> <span class="n">data</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">val_loss</span> <span class="o">+=</span> <span class="n">loss</span><span class="o">.</span><span class="n">item</span><span class="p">()</span> <span class="o">*</span> <span class="n">data</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>  <span class="c1"># accumulate the loss</span>
+            <span class="n">val_loss</span> <span class="o">/=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_valid_dataset</span><span class="p">)</span>  <span class="c1"># calculate the average loss</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_validLossList</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">val_loss</span><span class="p">)</span>  <span class="c1"># record the loss</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">r2</span> <span class="o">=</span> <span class="n">r2_score</span><span class="p">(</span><span class="n">label_list</span><span class="p">,</span> <span class="n">out_list</span><span class="p">)</span>  <span class="c1"># calculate the R square</span>
+            <span class="k">except</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="n">label_list</span><span class="p">)</span>
+                <span class="nb">print</span><span class="p">(</span><span class="n">out_list</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_valid_r2</span> <span class="o">=</span> <span class="n">r2</span>
+            <span class="k">if</span> <span class="n">r2</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">_bestr2</span><span class="p">:</span>
+                <span class="c1"># if the R square is better than the best R square,record the R square and save the model</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_bestr2</span> <span class="o">=</span> <span class="n">r2</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_besttrainr2</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_train_diagnosis</span><span class="o">.</span><span class="n">R2</span><span class="p">()</span><span class="o">.</span><span class="n">data</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_noUpdateEpoch</span> <span class="o">=</span> <span class="mi">0</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_modelSavePath</span><span class="p">):</span>
+                    <span class="n">os</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_modelSavePath</span><span class="p">)</span>
+                <span class="n">torch</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_model</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_modelSavePath</span> <span class="o">+</span> <span class="s1">&#39;/&#39;</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">_modelName</span> <span class="o">+</span> <span class="s2">&quot;.pkl&quot;</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_noUpdateEpoch</span> <span class="o">+=</span> <span class="mi">1</span>
+
+    <span class="k">def</span> <span class="nf">__test</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        test the network</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_model</span><span class="o">.</span><span class="n">eval</span><span class="p">()</span>
+        <span class="n">test_loss</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">label_list</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([])</span>
+        <span class="n">out_list</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([])</span>
+        <span class="n">data_loader</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_test_dataset</span><span class="o">.</span><span class="n">dataloader</span>
+        <span class="n">x_data</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">([])</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+        <span class="n">y_data</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">([])</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+        <span class="n">y_pred</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">([])</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+        <span class="n">weight_all</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">([])</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+        <span class="k">with</span> <span class="n">torch</span><span class="o">.</span><span class="n">no_grad</span><span class="p">():</span>
+            <span class="k">for</span> <span class="n">data</span><span class="p">,</span> <span class="n">coef</span><span class="p">,</span> <span class="n">label</span><span class="p">,</span> <span class="n">data_index</span> <span class="ow">in</span> <span class="n">data_loader</span><span class="p">:</span>
+                <span class="n">device</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">(</span><span class="s1">&#39;cuda&#39;</span><span class="p">)</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_use_gpu</span> <span class="k">else</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">(</span><span class="s1">&#39;cpu&#39;</span><span class="p">)</span>
+                <span class="n">data</span><span class="p">,</span> <span class="n">coef</span><span class="p">,</span> <span class="n">label</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">),</span> <span class="n">coef</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">),</span> <span class="n">label</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+                <span class="n">x_data</span><span class="p">,</span> <span class="n">y_data</span><span class="p">,</span> <span class="n">y_pred</span><span class="p">,</span> <span class="n">weight_all</span> <span class="o">=</span> <span class="n">x_data</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">),</span> <span class="n">y_data</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">),</span> <span class="n">y_pred</span><span class="o">.</span><span class="n">to</span><span class="p">(</span>
+                    <span class="n">device</span><span class="p">),</span> <span class="n">weight_all</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+                <span class="c1"># data,label = data.view(data.shape[0],-1),label.view(data.shape[0],-1)</span>
+                <span class="n">x_data</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">((</span><span class="n">x_data</span><span class="p">,</span> <span class="n">coef</span><span class="p">),</span> <span class="mi">0</span><span class="p">)</span>
+                <span class="n">y_data</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">((</span><span class="n">y_data</span><span class="p">,</span> <span class="n">label</span><span class="p">),</span> <span class="mi">0</span><span class="p">)</span>
+                <span class="n">weight</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_model</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+                <span class="n">weight_all</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">(</span>
+                    <span class="p">(</span><span class="n">weight_all</span><span class="p">,</span> <span class="n">weight</span><span class="o">.</span><span class="n">mul</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_weight</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">))),</span> <span class="mi">0</span><span class="p">)</span>
+                <span class="n">output</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_out</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_model</span><span class="p">(</span><span class="n">data</span><span class="p">)</span><span class="o">.</span><span class="n">mul</span><span class="p">(</span><span class="n">coef</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">float32</span><span class="p">)))</span>
+                <span class="n">y_pred</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">((</span><span class="n">y_pred</span><span class="p">,</span> <span class="n">output</span><span class="p">),</span> <span class="mi">0</span><span class="p">)</span>
+                <span class="n">loss</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_criterion</span><span class="p">(</span><span class="n">output</span><span class="p">,</span> <span class="n">label</span><span class="p">)</span>
+
+                <span class="n">out_list</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                    <span class="n">out_list</span><span class="p">,</span> <span class="n">output</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">cpu</span><span class="p">()</span><span class="o">.</span><span class="n">detach</span><span class="p">()</span><span class="o">.</span><span class="n">numpy</span><span class="p">())</span>  <span class="c1"># add the output to the list</span>
+                <span class="n">label_list</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                    <span class="n">label_list</span><span class="p">,</span> <span class="n">label</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">cpu</span><span class="p">()</span><span class="o">.</span><span class="n">numpy</span><span class="p">())</span>  <span class="c1"># add the label to the list</span>
+                <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+                    <span class="n">test_loss</span> <span class="o">+=</span> <span class="n">loss</span><span class="o">.</span><span class="n">item</span><span class="p">()</span> <span class="o">*</span> <span class="n">data</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">test_loss</span> <span class="o">+=</span> <span class="n">loss</span><span class="o">.</span><span class="n">item</span><span class="p">()</span> <span class="o">*</span> <span class="n">data</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>  <span class="c1"># accumulate the loss</span>
+            <span class="n">test_loss</span> <span class="o">/=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_test_dataset</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">__testLoss</span> <span class="o">=</span> <span class="n">test_loss</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">__testr2</span> <span class="o">=</span> <span class="n">r2_score</span><span class="p">(</span><span class="n">label_list</span><span class="p">,</span> <span class="n">out_list</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_test_diagnosis</span> <span class="o">=</span> <span class="n">DIAGNOSIS</span><span class="p">(</span><span class="n">weight_all</span><span class="p">,</span> <span class="n">x_data</span><span class="p">,</span> <span class="n">y_data</span><span class="p">,</span> <span class="n">y_pred</span><span class="p">)</span>
+
+<div class="viewcode-block" id="GNNWR.run">
+<a class="viewcode-back" href="../../gnnwr/models.html#gnnwr.models.GNNWR.run">[docs]</a>
+    <span class="k">def</span> <span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">max_epoch</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">early_stop</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span> <span class="n">print_frequency</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span> <span class="n">show_detailed_info</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        train the model and validate the model</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        max_epoch : int</span>
+<span class="sd">            the max epoch of the training (default: ``1``)</span>
+<span class="sd">        early_stop : int</span>
+<span class="sd">            if the model has not been updated for ``early_stop`` epochs, the training will stop (default: ``-1``)</span>
+
+<span class="sd">            if ``early_stop`` is ``-1``, the training will not stop until the max epoch</span>
+<span class="sd">        print_frequency : int</span>
+<span class="sd">            the frequency of printing the information (default: ``50``)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__istrained</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_use_gpu</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_model</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">DataParallel</span><span class="p">(</span><span class="n">module</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_model</span><span class="p">)</span>  <span class="c1"># parallel computing</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_model</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_model</span><span class="o">.</span><span class="n">cuda</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_out</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_out</span><span class="o">.</span><span class="n">cuda</span><span class="p">()</span>
+        <span class="c1"># create file</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_log_path</span><span class="p">):</span>
+            <span class="n">os</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_log_path</span><span class="p">)</span>
+        <span class="n">file_str</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_log_path</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">_log_file_name</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">basicConfig</span><span class="p">(</span><span class="nb">format</span><span class="o">=</span><span class="s1">&#39;</span><span class="si">%(asctime)s</span><span class="s1"> - </span><span class="si">%(filename)s</span><span class="s1">[line:</span><span class="si">%(lineno)d</span><span class="s1">] - </span><span class="si">%(levelname)s</span><span class="s1">: </span><span class="si">%(message)s</span><span class="s1">&#39;</span><span class="p">,</span>
+                            <span class="n">filename</span><span class="o">=</span><span class="n">file_str</span><span class="p">,</span> <span class="n">level</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">INFO</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">epoch</span> <span class="ow">in</span> <span class="n">trange</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">max_epoch</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_epoch</span> <span class="o">=</span> <span class="n">epoch</span>
+            <span class="c1"># train the network</span>
+            <span class="c1"># record the information of the training process</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">__train</span><span class="p">()</span>
+            <span class="c1"># validate the network</span>
+            <span class="c1"># record the information of the validation process</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">__valid</span><span class="p">()</span>
+            <span class="c1"># out put log every {print_frequency} epoch:</span>
+            <span class="k">if</span> <span class="p">(</span><span class="n">epoch</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">%</span> <span class="n">print_frequency</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">show_detailed_info</span><span class="p">:</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">Epoch: &quot;</span><span class="p">,</span> <span class="n">epoch</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;learning rate: &quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_optimizer</span><span class="o">.</span><span class="n">param_groups</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="s1">&#39;lr&#39;</span><span class="p">])</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Train Loss: &quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_trainLossList</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Train R2: </span><span class="si">{:.5f}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_train_diagnosis</span><span class="o">.</span><span class="n">R2</span><span class="p">()</span><span class="o">.</span><span class="n">data</span><span class="p">))</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Train RMSE: </span><span class="si">{:.5f}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_train_diagnosis</span><span class="o">.</span><span class="n">RMSE</span><span class="p">()</span><span class="o">.</span><span class="n">data</span><span class="p">))</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Train AIC: </span><span class="si">{:.5f}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_train_diagnosis</span><span class="o">.</span><span class="n">AIC</span><span class="p">()))</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Train AICc: </span><span class="si">{:.5f}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_train_diagnosis</span><span class="o">.</span><span class="n">AICc</span><span class="p">()))</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Valid Loss: &quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_validLossList</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Valid R2: </span><span class="si">{:.5f}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_valid_r2</span><span class="p">),</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Best R2: </span><span class="si">{:.5f}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_bestr2</span><span class="p">),</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">Epoch: &quot;</span><span class="p">,</span> <span class="n">epoch</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+                    <span class="nb">print</span><span class="p">(</span>
+                        <span class="s2">&quot;Train R2: </span><span class="si">{:.5f}</span><span class="s2">  Valid R2: </span><span class="si">{:.5f}</span><span class="s2">  Best R2: </span><span class="si">{:.5f}</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_train_diagnosis</span><span class="o">.</span><span class="n">R2</span><span class="p">()</span><span class="o">.</span><span class="n">data</span><span class="p">,</span>
+                                                                                       <span class="bp">self</span><span class="o">.</span><span class="n">_valid_r2</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_bestr2</span><span class="p">))</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_scheduler</span><span class="o">.</span><span class="n">step</span><span class="p">()</span>  <span class="c1"># update the learning rate</span>
+            <span class="c1"># tensorboard</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_writer</span><span class="o">.</span><span class="n">add_scalar</span><span class="p">(</span><span class="s1">&#39;Training/Learning Rate&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_optimizer</span><span class="o">.</span><span class="n">param_groups</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="s1">&#39;lr&#39;</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">_epoch</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_writer</span><span class="o">.</span><span class="n">add_scalar</span><span class="p">(</span><span class="s1">&#39;Training/Loss&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_trainLossList</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">_epoch</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_writer</span><span class="o">.</span><span class="n">add_scalar</span><span class="p">(</span><span class="s1">&#39;Training/R2&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_train_diagnosis</span><span class="o">.</span><span class="n">R2</span><span class="p">()</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_epoch</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_writer</span><span class="o">.</span><span class="n">add_scalar</span><span class="p">(</span><span class="s1">&#39;Training/RMSE&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_train_diagnosis</span><span class="o">.</span><span class="n">RMSE</span><span class="p">()</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_epoch</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_writer</span><span class="o">.</span><span class="n">add_scalar</span><span class="p">(</span><span class="s1">&#39;Training/AIC&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_train_diagnosis</span><span class="o">.</span><span class="n">AIC</span><span class="p">(),</span> <span class="bp">self</span><span class="o">.</span><span class="n">_epoch</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_writer</span><span class="o">.</span><span class="n">add_scalar</span><span class="p">(</span><span class="s1">&#39;Training/AICc&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_train_diagnosis</span><span class="o">.</span><span class="n">AICc</span><span class="p">(),</span> <span class="bp">self</span><span class="o">.</span><span class="n">_epoch</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_writer</span><span class="o">.</span><span class="n">add_scalar</span><span class="p">(</span><span class="s1">&#39;Validation/Loss&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_validLossList</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">_epoch</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_writer</span><span class="o">.</span><span class="n">add_scalar</span><span class="p">(</span><span class="s1">&#39;Validation/R2&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_valid_r2</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_epoch</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_writer</span><span class="o">.</span><span class="n">add_scalar</span><span class="p">(</span><span class="s1">&#39;Validation/Best R2&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_bestr2</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_epoch</span><span class="p">)</span>
+
+            <span class="c1"># log output</span>
+            <span class="n">log_str</span> <span class="o">=</span> <span class="s2">&quot;Epoch: &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">epoch</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">+</span> \
+                      <span class="s2">&quot;; Train Loss: &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_trainLossList</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span> <span class="o">+</span> \
+                      <span class="s2">&quot;; Train R2: </span><span class="si">{:5f}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_train_diagnosis</span><span class="o">.</span><span class="n">R2</span><span class="p">()</span><span class="o">.</span><span class="n">data</span><span class="p">)</span> <span class="o">+</span> \
+                      <span class="s2">&quot;; Train RMSE: </span><span class="si">{:5f}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_train_diagnosis</span><span class="o">.</span><span class="n">RMSE</span><span class="p">()</span><span class="o">.</span><span class="n">data</span><span class="p">)</span> <span class="o">+</span> \
+                      <span class="s2">&quot;; Train AIC: </span><span class="si">{:5f}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_train_diagnosis</span><span class="o">.</span><span class="n">AIC</span><span class="p">())</span> <span class="o">+</span> \
+                      <span class="s2">&quot;; Train AICc: </span><span class="si">{:5f}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_train_diagnosis</span><span class="o">.</span><span class="n">AICc</span><span class="p">())</span> <span class="o">+</span> \
+                      <span class="s2">&quot;; Valid Loss: &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_validLossList</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span> <span class="o">+</span> \
+                      <span class="s2">&quot;; Valid R2: &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_valid_r2</span><span class="p">)</span> <span class="o">+</span> \
+                      <span class="s2">&quot;; Learning Rate: &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_optimizer</span><span class="o">.</span><span class="n">param_groups</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="s1">&#39;lr&#39;</span><span class="p">])</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="n">log_str</span><span class="p">)</span>
+            <span class="k">if</span> <span class="mi">0</span> <span class="o">&lt;</span> <span class="n">early_stop</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">_noUpdateEpoch</span><span class="p">:</span>  <span class="c1"># stop when the model has not been updated for long time</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Training stop! Model has not been improved for over </span><span class="si">{}</span><span class="s2"> epochs.&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">early_stop</span><span class="p">))</span>
+                <span class="k">break</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">load_model</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_modelSavePath</span> <span class="o">+</span> <span class="s1">&#39;/&#39;</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">_modelName</span> <span class="o">+</span> <span class="s2">&quot;.pkl&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">result_data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">getWeights</span><span class="p">()</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Best_r2:&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_bestr2</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="GNNWR.predict">
+<a class="viewcode-back" href="../../gnnwr/models.html#gnnwr.models.GNNWR.predict">[docs]</a>
+    <span class="k">def</span> <span class="nf">predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        predict the result of the dataset</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        dataset : baseDataset,predictDataset</span>
+<span class="sd">            the dataset to be predicted</span>
+<span class="sd">        </span>
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        dataframe</span>
+<span class="sd">            the Pandas dataframe of the dataset with the predicted result</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">data_loader</span> <span class="o">=</span> <span class="n">dataset</span><span class="o">.</span><span class="n">dataloader</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">__istrained</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;WARNING! The model hasn&#39;t been trained or loaded!&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_model</span><span class="o">.</span><span class="n">eval</span><span class="p">()</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([])</span>
+        <span class="k">with</span> <span class="n">torch</span><span class="o">.</span><span class="n">no_grad</span><span class="p">():</span>
+            <span class="k">for</span> <span class="n">data</span><span class="p">,</span> <span class="n">coef</span> <span class="ow">in</span> <span class="n">data_loader</span><span class="p">:</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_use_gpu</span><span class="p">:</span>
+                    <span class="n">data</span><span class="p">,</span> <span class="n">coef</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">cuda</span><span class="p">(),</span> <span class="n">coef</span><span class="o">.</span><span class="n">cuda</span><span class="p">()</span>
+                <span class="n">output</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_out</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_model</span><span class="p">(</span><span class="n">data</span><span class="p">)</span><span class="o">.</span><span class="n">mul</span><span class="p">(</span><span class="n">coef</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">float32</span><span class="p">)))</span>
+                <span class="n">output</span> <span class="o">=</span> <span class="n">output</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">cpu</span><span class="p">()</span><span class="o">.</span><span class="n">detach</span><span class="p">()</span><span class="o">.</span><span class="n">numpy</span><span class="p">()</span>
+                <span class="n">result</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">result</span><span class="p">,</span> <span class="n">output</span><span class="p">)</span>
+        <span class="n">dataset</span><span class="o">.</span><span class="n">dataframe</span><span class="p">[</span><span class="s1">&#39;pred_result&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">result</span>
+        <span class="n">dataset</span><span class="o">.</span><span class="n">pred_result</span> <span class="o">=</span> <span class="n">result</span>
+        <span class="k">return</span> <span class="n">dataset</span><span class="o">.</span><span class="n">dataframe</span></div>
+
+
+<div class="viewcode-block" id="GNNWR.predict_weight">
+<a class="viewcode-back" href="../../gnnwr/models.html#gnnwr.models.GNNWR.predict_weight">[docs]</a>
+    <span class="k">def</span> <span class="nf">predict_weight</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        predict the spatial weight of the dataset</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        dataset : baseDataset,predictDataset</span>
+<span class="sd">            the dataset to be predicted</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        dataframe</span>
+<span class="sd">            the Pandas dataframe of the dataset with the predicted spatial weight</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">data_loader</span> <span class="o">=</span> <span class="n">dataset</span><span class="o">.</span><span class="n">dataloader</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">__istrained</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;WARNING! The model hasn&#39;t been trained or loaded!&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_model</span><span class="o">.</span><span class="n">eval</span><span class="p">()</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">([])</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+        <span class="k">with</span> <span class="n">torch</span><span class="o">.</span><span class="n">no_grad</span><span class="p">():</span>
+            <span class="k">for</span> <span class="n">data</span><span class="p">,</span> <span class="n">coef</span> <span class="ow">in</span> <span class="n">data_loader</span><span class="p">:</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_use_gpu</span><span class="p">:</span>
+                    <span class="n">result</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">coef</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">cuda</span><span class="p">(),</span> <span class="n">data</span><span class="o">.</span><span class="n">cuda</span><span class="p">(),</span> <span class="n">coef</span><span class="o">.</span><span class="n">cuda</span><span class="p">()</span>
+                    <span class="n">ols_w</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_weight</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span><span class="o">.</span><span class="n">cuda</span><span class="p">()</span>
+                <span class="n">weight</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_model</span><span class="p">(</span><span class="n">data</span><span class="p">)</span><span class="o">.</span><span class="n">mul</span><span class="p">(</span><span class="n">ols_w</span><span class="p">)</span>
+                <span class="n">result</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">((</span><span class="n">result</span><span class="p">,</span> <span class="n">weight</span><span class="p">),</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">cpu</span><span class="p">()</span><span class="o">.</span><span class="n">detach</span><span class="p">()</span><span class="o">.</span><span class="n">numpy</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">result</span></div>
+
+
+<div class="viewcode-block" id="GNNWR.load_model">
+<a class="viewcode-back" href="../../gnnwr/models.html#gnnwr.models.GNNWR.load_model">[docs]</a>
+    <span class="k">def</span> <span class="nf">load_model</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">,</span> <span class="n">use_dict</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">map_location</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        load the model</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        path : str</span>
+<span class="sd">            the path of the model</span>
+<span class="sd">        use_dict : bool</span>
+<span class="sd">            whether use dict to load the model (default: ``False``)</span>
+<span class="sd">        map_location : str</span>
+<span class="sd">            the location of the model (default: ``None``)</span>
+<span class="sd">            the location can be ``&quot;cpu&quot;`` or ``&quot;cuda&quot;``</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">use_dict</span><span class="p">:</span>
+            <span class="n">data</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">map_location</span><span class="o">=</span><span class="n">map_location</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_model</span><span class="o">.</span><span class="n">load_state_dict</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_model</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">map_location</span><span class="o">=</span><span class="n">map_location</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_use_gpu</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_model</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_model</span><span class="o">.</span><span class="n">cuda</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_model</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_model</span><span class="o">.</span><span class="n">cpu</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__istrained</span> <span class="o">=</span> <span class="kc">True</span></div>
+
+
+<div class="viewcode-block" id="GNNWR.gpumodel_to_cpu">
+<a class="viewcode-back" href="../../gnnwr/models.html#gnnwr.models.GNNWR.gpumodel_to_cpu">[docs]</a>
+    <span class="k">def</span> <span class="nf">gpumodel_to_cpu</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">,</span> <span class="n">save_path</span><span class="p">,</span> <span class="n">use_model</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        convert gpu model to cpu model</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        path : str</span>
+<span class="sd">            the path of the model</span>
+<span class="sd">        save_path : str</span>
+<span class="sd">            the path of the new model</span>
+<span class="sd">        use_model : bool</span>
+<span class="sd">            whether use dict to load the model (default: ``True``)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">use_model</span><span class="p">:</span>
+            <span class="n">data</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">map_location</span><span class="o">=</span><span class="s1">&#39;cpu&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">state_dict</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">data</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">map_location</span><span class="o">=</span><span class="s1">&#39;cpu&#39;</span><span class="p">)</span>
+        <span class="n">new_state_dict</span> <span class="o">=</span> <span class="n">OrderedDict</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">data</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">name</span> <span class="o">=</span> <span class="n">k</span><span class="p">[</span><span class="mi">7</span><span class="p">:]</span>  <span class="c1"># remove module.</span>
+            <span class="n">new_state_dict</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">v</span>
+        <span class="n">torch</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">new_state_dict</span><span class="p">,</span> <span class="n">save_path</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="GNNWR.getLoss">
+<a class="viewcode-back" href="../../gnnwr/models.html#gnnwr.models.GNNWR.getLoss">[docs]</a>
+    <span class="k">def</span> <span class="nf">getLoss</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        get network&#39;s loss</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        list</span>
+<span class="sd">            the list of the loss in training process and validation process</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_trainLossList</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_validLossList</span></div>
+
+
+<div class="viewcode-block" id="GNNWR.add_graph">
+<a class="viewcode-back" href="../../gnnwr/models.html#gnnwr.models.GNNWR.add_graph">[docs]</a>
+    <span class="k">def</span> <span class="nf">add_graph</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        add the graph of the model to tensorboard</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">data</span><span class="p">,</span> <span class="n">coef</span><span class="p">,</span> <span class="n">label</span><span class="p">,</span> <span class="n">data_index</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_train_dataset</span><span class="o">.</span><span class="n">dataloader</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_use_gpu</span><span class="p">:</span>
+                <span class="n">data</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">cuda</span><span class="p">()</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_model</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_model</span><span class="o">.</span><span class="n">cuda</span><span class="p">()</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_model</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_model</span><span class="o">.</span><span class="n">cpu</span><span class="p">()</span>
+                <span class="n">data</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">cpu</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_writer</span><span class="o">.</span><span class="n">add_graph</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_model</span><span class="p">,</span> <span class="n">data</span><span class="p">)</span>
+            <span class="k">break</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Add Graph Successfully&quot;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="GNNWR.result">
+<a class="viewcode-back" href="../../gnnwr/models.html#gnnwr.models.GNNWR.result">[docs]</a>
+    <span class="k">def</span> <span class="nf">result</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">use_dict</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">map_location</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        print the result of the model, including the model structure, optimizer,the result of test dataset</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        path : str</span>
+<span class="sd">            the path of the model(default: ``None``)</span>
+<span class="sd">            | if ``path`` is ``None``, the model will be loaded from ``self._modelSavePath + &quot;/&quot; + self._modelName + &quot;.pkl&quot;``</span>
+<span class="sd">        use_dict : bool</span>
+<span class="sd">            whether use dict to load the model (default: ``False``)</span>
+<span class="sd">            | if ``use_dict`` is ``True``, the model will be loaded from ``path`` as dict</span>
+<span class="sd">        map_location : str</span>
+<span class="sd">            the location of the model (default: ``None``)</span>
+<span class="sd">            the location can be ``&quot;cpu&quot;`` or ``&quot;cuda&quot;``</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># load model</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">__istrained</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s2">&quot;The model hasn&#39;t been trained or loaded!&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">path</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">path</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_modelSavePath</span> <span class="o">+</span> <span class="s2">&quot;/&quot;</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">_modelName</span> <span class="o">+</span> <span class="s2">&quot;.pkl&quot;</span>
+        <span class="k">if</span> <span class="n">use_dict</span><span class="p">:</span>
+            <span class="n">data</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">map_location</span><span class="o">=</span><span class="n">map_location</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_model</span><span class="o">.</span><span class="n">load_state_dict</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_model</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">map_location</span><span class="o">=</span><span class="n">map_location</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_use_gpu</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_model</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">DataParallel</span><span class="p">(</span><span class="n">module</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_model</span><span class="p">)</span>  <span class="c1"># parallel computing</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_model</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_model</span><span class="o">.</span><span class="n">cuda</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_out</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_out</span><span class="o">.</span><span class="n">cuda</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_model</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_model</span><span class="o">.</span><span class="n">cpu</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_out</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_out</span><span class="o">.</span><span class="n">cpu</span><span class="p">()</span>
+        <span class="k">with</span> <span class="n">torch</span><span class="o">.</span><span class="n">no_grad</span><span class="p">():</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">__test</span><span class="p">()</span>
+
+        <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Test Loss: &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__testLoss</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot;; Test R2: &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__testr2</span><span class="p">))</span>
+        <span class="c1"># print result</span>
+        <span class="c1"># basic information</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;--------------------Result Table--------------------</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Model Name:           |&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_modelName</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Model Structure:      |</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_model</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Optimizer:            |</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_optimizer</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;independent variable: |&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_train_dataset</span><span class="o">.</span><span class="n">x</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;dependent variable:   |&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_train_dataset</span><span class="o">.</span><span class="n">y</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">----------------------------------------------------</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Test Loss: &quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">__testLoss</span><span class="p">,</span> <span class="s2">&quot; Test R2: &quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">__testr2</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_valid_r2</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">_valid_r2</span> <span class="o">!=</span> <span class="nb">float</span><span class="p">(</span><span class="s1">&#39;-inf&#39;</span><span class="p">):</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Train R2:  </span><span class="si">{:5f}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_besttrainr2</span><span class="p">),</span> <span class="s2">&quot; Valid R2: &quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_bestr2</span><span class="p">)</span>
+        <span class="c1"># OLS</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">OLS:  |&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_weight</span><span class="p">)</span>
+        <span class="c1"># Diagnostics</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;R2:   |&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">__testr2</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;RMSE: | </span><span class="si">{:5f}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_test_diagnosis</span><span class="o">.</span><span class="n">RMSE</span><span class="p">()</span><span class="o">.</span><span class="n">data</span><span class="p">))</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;AIC:  | </span><span class="si">{:5f}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_test_diagnosis</span><span class="o">.</span><span class="n">AIC</span><span class="p">()))</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;AICc: | </span><span class="si">{:5f}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_test_diagnosis</span><span class="o">.</span><span class="n">AICc</span><span class="p">()))</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;F1:   | </span><span class="si">{:5f}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_test_diagnosis</span><span class="o">.</span><span class="n">F1_GNN</span><span class="p">()</span><span class="o">.</span><span class="n">data</span><span class="p">))</span></div>
+
+
+<div class="viewcode-block" id="GNNWR.reg_result">
+<a class="viewcode-back" href="../../gnnwr/models.html#gnnwr.models.GNNWR.reg_result">[docs]</a>
+    <span class="k">def</span> <span class="nf">reg_result</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filename</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">model_path</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">use_dict</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">only_return</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">map_location</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        save the regression result of the model, including the weight of each argument, the bias, the predicted result</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        filename : str</span>
+<span class="sd">            the path of the result file (default: ``None``)</span>
+<span class="sd">            | if ``filename`` is ``None``, the result will not be saved as file</span>
+<span class="sd">        model_path : str</span>
+<span class="sd">            the path of the model (default: ``None``)</span>
+<span class="sd">            | if ``model_path`` is ``None``, the model will be loaded from ``self._modelSavePath + &quot;/&quot; + self._modelName + &quot;.pkl&quot;``</span>
+<span class="sd">        use_dict : bool</span>
+<span class="sd">            whether use dict to load the model (default: ``False``)</span>
+<span class="sd">            | if ``use_dict`` is ``True``, the model will be loaded from ``model_path`` as dict</span>
+<span class="sd">        only_return : bool</span>
+<span class="sd">            whether only return the result (default: ``False``)</span>
+<span class="sd">            | if ``only_return`` is ``True``, the result will not be saved as file</span>
+<span class="sd">        map_location : str</span>
+<span class="sd">            the location of the model (default: ``None``)</span>
+<span class="sd">            the location can be ``&quot;cpu&quot;`` or ``&quot;cuda&quot;``</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        dataframe</span>
+<span class="sd">            the Pandas dataframe of the result</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">model_path</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">model_path</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_modelSavePath</span> <span class="o">+</span> <span class="s2">&quot;/&quot;</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">_modelName</span> <span class="o">+</span> <span class="s2">&quot;.pkl&quot;</span>
+        <span class="k">if</span> <span class="n">use_dict</span><span class="p">:</span>
+            <span class="n">data</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">model_path</span><span class="p">,</span> <span class="n">map_location</span><span class="o">=</span><span class="n">map_location</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_model</span><span class="o">.</span><span class="n">load_state_dict</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_model</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">model_path</span><span class="p">,</span> <span class="n">map_location</span><span class="o">=</span><span class="n">map_location</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_use_gpu</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_model</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">DataParallel</span><span class="p">(</span><span class="n">module</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_model</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_model</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_model</span><span class="o">.</span><span class="n">cuda</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_out</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_out</span><span class="o">.</span><span class="n">cuda</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_model</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_model</span><span class="o">.</span><span class="n">cpu</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_out</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_out</span><span class="o">.</span><span class="n">cpu</span><span class="p">()</span>
+        <span class="n">device</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">(</span><span class="s1">&#39;cuda&#39;</span><span class="p">)</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_use_gpu</span> <span class="k">else</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">(</span><span class="s1">&#39;cpu&#39;</span><span class="p">)</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">([])</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+        <span class="k">with</span> <span class="n">torch</span><span class="o">.</span><span class="n">no_grad</span><span class="p">():</span>
+            <span class="k">for</span> <span class="n">data</span><span class="p">,</span> <span class="n">coef</span><span class="p">,</span> <span class="n">label</span><span class="p">,</span> <span class="n">data_index</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_train_dataset</span><span class="o">.</span><span class="n">dataloader</span><span class="p">:</span>
+                <span class="n">data</span><span class="p">,</span> <span class="n">coef</span><span class="p">,</span> <span class="n">label</span><span class="p">,</span> <span class="n">data_index</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">),</span> <span class="n">coef</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">),</span> <span class="n">label</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">),</span> <span class="n">data_index</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+                <span class="n">output</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_out</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_model</span><span class="p">(</span><span class="n">data</span><span class="p">)</span><span class="o">.</span><span class="n">mul</span><span class="p">(</span><span class="n">coef</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">float32</span><span class="p">)))</span>
+                <span class="n">weight</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_model</span><span class="p">(</span><span class="n">data</span><span class="p">)</span><span class="o">.</span><span class="n">mul</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_weight</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">))</span>
+                <span class="n">output</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">((</span><span class="n">weight</span><span class="p">,</span> <span class="n">output</span><span class="p">,</span> <span class="n">data_index</span><span class="p">),</span> <span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+                <span class="n">result</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">((</span><span class="n">result</span><span class="p">,</span> <span class="n">output</span><span class="p">),</span> <span class="mi">0</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">data</span><span class="p">,</span> <span class="n">coef</span><span class="p">,</span> <span class="n">label</span><span class="p">,</span> <span class="n">data_index</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_valid_dataset</span><span class="o">.</span><span class="n">dataloader</span><span class="p">:</span>
+                <span class="n">data</span><span class="p">,</span> <span class="n">coef</span><span class="p">,</span> <span class="n">label</span><span class="p">,</span> <span class="n">data_index</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">),</span> <span class="n">coef</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">),</span> <span class="n">label</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">),</span> <span class="n">data_index</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+                <span class="n">output</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_out</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_model</span><span class="p">(</span><span class="n">data</span><span class="p">)</span><span class="o">.</span><span class="n">mul</span><span class="p">(</span><span class="n">coef</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">float32</span><span class="p">)))</span>
+                <span class="n">weight</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_model</span><span class="p">(</span><span class="n">data</span><span class="p">)</span><span class="o">.</span><span class="n">mul</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_weight</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">))</span>
+                <span class="n">output</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">((</span><span class="n">weight</span><span class="p">,</span> <span class="n">output</span><span class="p">,</span> <span class="n">data_index</span><span class="p">),</span> <span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+                <span class="n">result</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">((</span><span class="n">result</span><span class="p">,</span> <span class="n">output</span><span class="p">),</span> <span class="mi">0</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">data</span><span class="p">,</span> <span class="n">coef</span><span class="p">,</span> <span class="n">label</span><span class="p">,</span> <span class="n">data_index</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_test_dataset</span><span class="o">.</span><span class="n">dataloader</span><span class="p">:</span>
+                <span class="n">data</span><span class="p">,</span> <span class="n">coef</span><span class="p">,</span> <span class="n">label</span><span class="p">,</span> <span class="n">data_index</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">),</span> <span class="n">coef</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">),</span> <span class="n">label</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">),</span> <span class="n">data_index</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+                <span class="n">output</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_out</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_model</span><span class="p">(</span><span class="n">data</span><span class="p">)</span><span class="o">.</span><span class="n">mul</span><span class="p">(</span><span class="n">coef</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">float32</span><span class="p">)))</span>
+                <span class="n">weight</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_model</span><span class="p">(</span><span class="n">data</span><span class="p">)</span><span class="o">.</span><span class="n">mul</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_weight</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">))</span>
+                <span class="n">output</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">((</span><span class="n">weight</span><span class="p">,</span> <span class="n">output</span><span class="p">,</span> <span class="n">data_index</span><span class="p">),</span> <span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+                <span class="n">result</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">((</span><span class="n">result</span><span class="p">,</span> <span class="n">output</span><span class="p">),</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">cpu</span><span class="p">()</span><span class="o">.</span><span class="n">detach</span><span class="p">()</span><span class="o">.</span><span class="n">numpy</span><span class="p">()</span>
+        <span class="n">columns</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_train_dataset</span><span class="o">.</span><span class="n">x</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">columns</span><span class="p">)):</span>
+            <span class="n">columns</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;weight_&quot;</span> <span class="o">+</span> <span class="n">columns</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+        <span class="n">columns</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;bias&quot;</span><span class="p">)</span>
+        <span class="n">columns</span> <span class="o">=</span> <span class="n">columns</span> <span class="o">+</span> <span class="p">[</span><span class="s2">&quot;Pred_&quot;</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">_train_dataset</span><span class="o">.</span><span class="n">y</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">_train_dataset</span><span class="o">.</span><span class="n">id</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">result</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="n">columns</span><span class="p">)</span>
+        <span class="n">result</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_train_dataset</span><span class="o">.</span><span class="n">id</span><span class="p">]</span> <span class="o">=</span> <span class="n">result</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_train_dataset</span><span class="o">.</span><span class="n">id</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">only_return</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">result</span>
+        <span class="k">if</span> <span class="n">filename</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">result</span><span class="o">.</span><span class="n">to_csv</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+                <span class="s2">&quot;Warning! The input write file path is not set. Result is returned by function but not saved as file.&quot;</span><span class="p">,</span>
+                <span class="ne">RuntimeWarning</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">result</span></div>
+
+
+<div class="viewcode-block" id="GNNWR.getWeights">
+<a class="viewcode-back" href="../../gnnwr/models.html#gnnwr.models.GNNWR.getWeights">[docs]</a>
+    <span class="k">def</span> <span class="nf">getWeights</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        get weight of each argument</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        dataframe</span>
+<span class="sd">            the Pandas dataframe of the weight of each argument in train_dataset</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">result_data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">reg_result</span><span class="p">(</span><span class="n">only_return</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">result_data</span><span class="p">[</span><span class="s1">&#39;id&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">result_data</span><span class="p">[</span><span class="s1">&#39;id&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">int64</span><span class="p">)</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">_train_dataset</span><span class="o">.</span><span class="n">dataframe</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_valid_dataset</span><span class="o">.</span><span class="n">dataframe</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_test_dataset</span><span class="o">.</span><span class="n">dataframe</span><span class="p">])</span>
+        <span class="n">data</span><span class="o">.</span><span class="n">set_index</span><span class="p">(</span><span class="s1">&#39;id&#39;</span><span class="p">,</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">result_data</span><span class="o">.</span><span class="n">set_index</span><span class="p">(</span><span class="s1">&#39;id&#39;</span><span class="p">,</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">result_data</span> <span class="o">=</span> <span class="n">result_data</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">result_data</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="GTNNWR">
+<a class="viewcode-back" href="../../gnnwr/models.html#gnnwr.models.GTNNWR">[docs]</a>
+<span class="k">class</span> <span class="nc">GTNNWR</span><span class="p">(</span><span class="n">GNNWR</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    GTNNWR model is a model based on GNNWR and STPNN, which is a model that can be used to solve the problem of</span>
+<span class="sd">    spatial-temporal non-stationarity.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    train_dataset : baseDataset</span>
+<span class="sd">        the dataset for training</span>
+<span class="sd">    valid_dataset : baseDataset</span>
+<span class="sd">        the dataset for validation</span>
+<span class="sd">    test_dataset : baseDataset</span>
+<span class="sd">        the dataset for test</span>
+<span class="sd">    dense_layers : list</span>
+<span class="sd">        the dense layers of the model (default: ``None``)</span>
+<span class="sd">        | i.e. ``[[3],[128,64,32]]`` the first list in input is hidden layers of STPNN, the second one is hidden layers of SWNN.</span>
+<span class="sd">    start_lr : float</span>
+<span class="sd">        the start learning rate (default: ``0.1``)</span>
+<span class="sd">    optimizer : str, optional</span>
+<span class="sd">        the optimizer of the model (default: ``&quot;Adagrad&quot;``)</span>
+<span class="sd">        choose from &quot;SGD&quot;,&quot;Adam&quot;,&quot;RMSprop&quot;,&quot;Adagrad&quot;,&quot;Adadelta&quot;</span>
+<span class="sd">    drop_out : float</span>
+<span class="sd">        the drop out rate of the model (default: ``0.2``)</span>
+<span class="sd">    batch_norm : bool, optional</span>
+<span class="sd">        whether use batch normalization (default: ``True``)</span>
+<span class="sd">    activate_func : torch.nn</span>
+<span class="sd">        the activate function of the model (default: ``nn.PReLU(init=0.4)``)</span>
+<span class="sd">    model_name : str</span>
+<span class="sd">        the name of the model (default: ``&quot;GNNWR_&quot; + datetime.datetime.today().strftime(&quot;%Y%m%d-%H%M%S&quot;)``)</span>
+<span class="sd">    model_save_path : str</span>
+<span class="sd">        the path of the model (default: ``&quot;../gnnwr_models&quot;``)</span>
+<span class="sd">    write_path : str</span>
+<span class="sd">        the path of the log (default: ``&quot;../gnnwr_runs/&quot; + datetime.datetime.now().strftime(&quot;%Y%m%d-%H%M%S&quot;)``)</span>
+<span class="sd">    use_gpu : bool</span>
+<span class="sd">        whether use gpu or not (default: ``True``)</span>
+<span class="sd">    use_ols : bool</span>
+<span class="sd">        whether use ols or not (default: ``True``)</span>
+<span class="sd">    log_path : str</span>
+<span class="sd">        the path of the log (default: ``&quot;../gnnwr_logs/&quot;``)</span>
+<span class="sd">    log_file_name : str</span>
+<span class="sd">        the name of the log (default: ``&quot;gnnwr&quot; + datetime.datetime.now().strftime(&quot;%Y%m%d-%H%M%S&quot;) + &quot;.log&quot;``)</span>
+<span class="sd">    log_level : int</span>
+<span class="sd">        the level of the log (default: ``logging.INFO``)</span>
+<span class="sd">    optimizer_params : dict, optional</span>
+<span class="sd">        the params of the optimizer and the scheduler (default: ``None``)</span>
+
+<span class="sd">        if optimizer is SGD, the params are:</span>
+
+<span class="sd">            | maxlr: float, the max learning rate (default: ``0.1``)</span>
+
+<span class="sd">            | minlr: float, the min learning rate (default: ``0.01``)</span>
+
+<span class="sd">            | upepoch: int, the epoch of learning rate up (default: ``10000``)</span>
+
+<span class="sd">            | decayepoch: int, the epoch of learning rate decay (default: ``20000``)</span>
+
+<span class="sd">            | decayrate: float, the rate of learning rate decay (default: ``0.1``)</span>
+
+<span class="sd">            | stop_change_epoch: int, the epoch of learning rate stop change (default: ``30000``)</span>
+
+<span class="sd">            | stop_lr: float, the learning rate when stop change (default: ``0.001``)</span>
+
+<span class="sd">        if optimizer is Other, the params are:</span>
+
+<span class="sd">            | scheduler: str, the name of the scheduler (default: ``&quot;CosineAnnealingWarmRestarts&quot;``) in {``&quot;MultiStepLR&quot;,&quot;CosineAnnealingLR&quot;,&quot;CosineAnnealingWarmRestarts&quot;``}</span>
+
+<span class="sd">            | scheduler_milestones: list, the milestones of the scheduler MultiStepLR (default: ``[500,1000,2000,4000]``)</span>
+
+<span class="sd">            | scheduler_gamma: float, the gamma of the scheduler MultiStepLR (default: ``0.5``)</span>
+
+<span class="sd">            | scheduler_T_max: int, the T_max of the scheduler CosineAnnealingLR (default: ``1000``)</span>
+
+<span class="sd">            | scheduler_eta_min: float, the eta_min of the scheduler CosineAnnealingLR and CosineAnnealingWarmRestarts (default: ``0.01``)</span>
+
+<span class="sd">            | scheduler_T_0: int, the T_0 of the scheduler CosineAnnealingWarmRestarts (default: ``100``)</span>
+
+<span class="sd">            | scheduler_T_mult: int, the T_mult of the scheduler CosineAnnealingWarmRestarts (default: ``3``)</span>
+<span class="sd">    STPNN_outsize:int</span>
+<span class="sd">        the output size of STPNN(default:``1``)</span>
+<span class="sd">    STNN_SPNN_params:dict</span>
+<span class="sd">        the params of STNN and SPNN(default:``None``)</span>
+<span class="sd">        </span>
+<span class="sd">        STPNN_batch_norm:bool</span>
+<span class="sd">            </span>
+<span class="sd">            whether use batchnorm in STNN and SPNN or not (Default:``True``)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                 <span class="n">train_dataset</span><span class="p">,</span>
+                 <span class="n">valid_dataset</span><span class="p">,</span>
+                 <span class="n">test_dataset</span><span class="p">,</span>
+                 <span class="n">dense_layers</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                 <span class="n">start_lr</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">.1</span><span class="p">,</span>
+                 <span class="n">optimizer</span><span class="o">=</span><span class="s2">&quot;Adam&quot;</span><span class="p">,</span>
+                 <span class="n">drop_out</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span>
+                 <span class="n">batch_norm</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                 <span class="n">activate_func</span><span class="o">=</span><span class="n">nn</span><span class="o">.</span><span class="n">PReLU</span><span class="p">(</span><span class="n">init</span><span class="o">=</span><span class="mf">0.4</span><span class="p">),</span>
+                 <span class="n">model_name</span><span class="o">=</span><span class="s2">&quot;GTNNWR_&quot;</span> <span class="o">+</span> <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">today</span><span class="p">()</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">&quot;%Y%m</span><span class="si">%d</span><span class="s2">-%H%M%S&quot;</span><span class="p">),</span>
+                 <span class="n">model_save_path</span><span class="o">=</span><span class="s2">&quot;../gtnnwr_models&quot;</span><span class="p">,</span>
+                 <span class="n">write_path</span><span class="o">=</span><span class="s2">&quot;../gtnnwr_runs/&quot;</span> <span class="o">+</span> <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">&quot;%Y%m</span><span class="si">%d</span><span class="s2">-%H%M%S&quot;</span><span class="p">),</span>
+                 <span class="n">use_gpu</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+                 <span class="n">use_ols</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+                 <span class="n">log_path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;../gtnnwr_logs/&quot;</span><span class="p">,</span>
+                 <span class="n">log_file_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;gtnnwr&quot;</span> <span class="o">+</span> <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">&quot;%Y%m</span><span class="si">%d</span><span class="s2">-%H%M%S&quot;</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot;.log&quot;</span><span class="p">,</span>
+                 <span class="n">log_level</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">INFO</span><span class="p">,</span>
+                 <span class="n">optimizer_params</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                 <span class="n">STPNN_outsize</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+                 <span class="n">STNN_SPNN_params</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                 <span class="p">):</span>
+
+        <span class="k">if</span> <span class="n">optimizer_params</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">optimizer_params</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;scheduler&#39;</span><span class="p">:</span> <span class="s1">&#39;MultiStepLR&#39;</span><span class="p">,</span> <span class="s1">&#39;scheduler_milestones&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">100</span><span class="p">,</span> <span class="mi">300</span><span class="p">,</span> <span class="mi">500</span><span class="p">]}</span>
+        <span class="k">if</span> <span class="n">dense_layers</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">dense_layers</span> <span class="o">=</span> <span class="p">[[],</span> <span class="p">[]]</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">GTNNWR</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">train_dataset</span><span class="p">,</span> <span class="n">valid_dataset</span><span class="p">,</span> <span class="n">test_dataset</span><span class="p">,</span> <span class="n">dense_layers</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">start_lr</span><span class="p">,</span> <span class="n">optimizer</span><span class="p">,</span>
+                                     <span class="n">drop_out</span><span class="p">,</span> <span class="n">batch_norm</span><span class="p">,</span> <span class="n">activate_func</span><span class="p">,</span> <span class="n">model_name</span><span class="p">,</span> <span class="n">model_save_path</span><span class="p">,</span> <span class="n">write_path</span><span class="p">,</span>
+                                     <span class="n">use_gpu</span><span class="p">,</span> <span class="n">use_ols</span><span class="p">,</span> <span class="n">log_path</span><span class="p">,</span> <span class="n">log_file_name</span><span class="p">,</span> <span class="n">log_level</span><span class="p">,</span> <span class="n">optimizer_params</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_STPNN_out</span> <span class="o">=</span> <span class="n">STPNN_outsize</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_modelName</span> <span class="o">=</span> <span class="n">model_name</span>  <span class="c1"># model name</span>
+        <span class="k">if</span> <span class="n">train_dataset</span><span class="o">.</span><span class="n">simple_distance</span><span class="p">:</span>
+            <span class="n">insize</span> <span class="o">=</span> <span class="mi">2</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">insize</span> <span class="o">=</span> <span class="n">train_dataset</span><span class="o">.</span><span class="n">distances</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">STNN_SPNN_params</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">STNN_SPNN_params</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">STNN_outsize</span> <span class="o">=</span> <span class="n">STNN_SPNN_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;STNN_outsize&quot;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">SPNN_outsize</span> <span class="o">=</span> <span class="n">STNN_SPNN_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;SPNN_outsize&quot;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">STPNN_batch_norm</span> <span class="o">=</span> <span class="n">STNN_SPNN_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;STPNN_batch_norm&quot;</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">train_dataset</span><span class="o">.</span><span class="n">is_need_STNN</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_model</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Sequential</span><span class="p">(</span><span class="n">STNN_SPNN</span><span class="p">(</span><span class="n">train_dataset</span><span class="o">.</span><span class="n">temporal</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">STNN_outsize</span><span class="p">,</span>
+                                                  <span class="n">train_dataset</span><span class="o">.</span><span class="n">distances</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">SPNN_outsize</span><span class="p">),</span>
+                                        <span class="n">STPNN</span><span class="p">(</span><span class="n">dense_layers</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">STNN_outsize</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">SPNN_outsize</span><span class="p">,</span>
+                                              <span class="bp">self</span><span class="o">.</span><span class="n">_STPNN_out</span><span class="p">,</span> <span class="n">drop_out</span><span class="p">,</span> <span class="n">batch_norm</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">STPNN_batch_norm</span><span class="p">),</span>
+                                        <span class="n">SWNN</span><span class="p">(</span><span class="n">dense_layers</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">_STPNN_out</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_insize</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_outsize</span><span class="p">,</span> <span class="n">drop_out</span><span class="p">,</span>
+                                             <span class="n">activate_func</span><span class="p">,</span> <span class="n">batch_norm</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_model</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Sequential</span><span class="p">(</span><span class="n">STPNN</span><span class="p">(</span><span class="n">dense_layers</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">insize</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_STPNN_out</span><span class="p">,</span> <span class="n">drop_out</span><span class="p">,</span>
+                                              <span class="n">batch_norm</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">STPNN_batch_norm</span><span class="p">),</span>
+                                        <span class="n">SWNN</span><span class="p">(</span><span class="n">dense_layers</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">_STPNN_out</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_insize</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_outsize</span><span class="p">,</span> <span class="n">drop_out</span><span class="p">,</span>
+                                             <span class="n">activate_func</span><span class="p">,</span> <span class="n">batch_norm</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">init_optimizer</span><span class="p">(</span><span class="n">optimizer</span><span class="p">,</span> <span class="n">optimizer_params</span><span class="p">)</span></div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2023, gnnwr.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

@@ -1,0 +1,1026 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>gnnwr.datasets &mdash; GNNWR 0.1.4 documentation</title>
+      <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="../../_static/documentation_options.js?v=fd825880"></script>
+        <script src="../../_static/doctools.js?v=888ff710"></script>
+        <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            GNNWR
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../gnnwr/datasets.html">gnnwr.datasets module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../gnnwr/models.html">gnnwr.models module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../gnnwr/networks.html">gnnwr.networks module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../gnnwr/utils.html">gnnwr.utils module</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">GNNWR</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">gnnwr.datasets</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for gnnwr.datasets</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">json</span>
+<span class="kn">import</span> <span class="nn">os</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">pandas</span>
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="kn">import</span> <span class="nn">torch</span>
+<span class="kn">from</span> <span class="nn">sklearn.preprocessing</span> <span class="kn">import</span> <span class="n">MinMaxScaler</span><span class="p">,</span> <span class="n">StandardScaler</span>
+<span class="kn">from</span> <span class="nn">torch.utils.data</span> <span class="kn">import</span> <span class="n">Dataset</span><span class="p">,</span> <span class="n">DataLoader</span>
+<span class="kn">import</span> <span class="nn">warnings</span>
+<span class="kn">from</span> <span class="nn">scipy.spatial</span> <span class="kn">import</span> <span class="n">distance</span>
+
+<span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">The package of `datasets` includes the following functions:</span>
+<span class="sd">    1. init_dataset: initialize the dataset for training, validation and testing</span>
+<span class="sd">    2. init_dataset_cv: initialize the dataset for cross-validation</span>
+<span class="sd">    3. init_predict_dataset: initialize the dataset for prediction</span>
+<span class="sd">    4. BasicDistance: calculate the distance matrix of spatial/spatio-temporal data</span>
+<span class="sd">    5. ManhattanDistance: calculate the Manhattan distance matrix of spatial/spatio-temporal data</span>
+<span class="sd">and the following classes:</span>
+<span class="sd">    1. baseDataset: the base class of dataset</span>
+<span class="sd">    2. predictDataset: the class of dataset for prediction</span>
+<span class="sd">the purpose of this package is to provide the basic functions of pre-processing data and calculating distance matrix</span>
+<span class="sd">to facilitate the use of the model.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+
+<div class="viewcode-block" id="baseDataset">
+<a class="viewcode-back" href="../../gnnwr/datasets.html#gnnwr.datasets.baseDataset">[docs]</a>
+<span class="k">class</span> <span class="nc">baseDataset</span><span class="p">(</span><span class="n">Dataset</span><span class="p">):</span>
+<span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    baseDataset is the base class of dataset, which is used to store the data and other information.</span>
+<span class="sd">    it also provides the function of data scaling, data saving and data loading.</span>
+
+<span class="sd">    :param data: DataSets with x_column and y_column</span>
+<span class="sd">    :param x_column: independent variables column name</span>
+<span class="sd">    :param y_column: dependent variables column name</span>
+<span class="sd">    :param is_need_STNN: whether to use STNN</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">x_column</span><span class="p">:</span> <span class="nb">list</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">y_column</span><span class="p">:</span> <span class="nb">list</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">id_column</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">is_need_STNN</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">dataframe</span> <span class="o">=</span> <span class="n">data</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">x</span> <span class="o">=</span> <span class="n">x_column</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">y</span> <span class="o">=</span> <span class="n">y_column</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">id</span> <span class="o">=</span> <span class="n">id_column</span>
+        <span class="k">if</span> <span class="n">data</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">x_data</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">datasize</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">coefsize</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">y_data</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">id_data</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">x_data</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="n">x_column</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span><span class="o">.</span><span class="n">values</span>  <span class="c1"># x_data is independent variables data</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">datasize</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">x_data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>  <span class="c1"># datasize is the number of samples</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">coefsize</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">x_column</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span>  <span class="c1"># coefsize is the number of coefficients</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">y_data</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="n">y_column</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span><span class="o">.</span><span class="n">values</span>  <span class="c1"># y_data is dependent variables data</span>
+            <span class="k">if</span> <span class="n">id_column</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">id_data</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="n">id_column</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">int64</span><span class="p">)</span><span class="o">.</span><span class="n">values</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;id_column is None&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">is_need_STNN</span> <span class="o">=</span> <span class="n">is_need_STNN</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">scale_fn</span> <span class="o">=</span> <span class="kc">None</span>  <span class="c1"># scale function</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">x_scale_info</span> <span class="o">=</span> <span class="kc">None</span>  <span class="c1"># scale information of x_data</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">y_scale_info</span> <span class="o">=</span> <span class="kc">None</span>  <span class="c1"># scale information of y_data</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">distances</span> <span class="o">=</span> <span class="kc">None</span>  <span class="c1"># distances is the distance matrix of spatial/spatio-temporal data</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">temporal</span> <span class="o">=</span> <span class="kc">None</span>  <span class="c1"># temporal is the temporal distance matrix of spatio-temporal data</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">distances_scale_params</span> <span class="o">=</span> <span class="kc">None</span>  <span class="c1"># scale parameters of distances</span>
+
+    <span class="k">def</span> <span class="fm">__len__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        :return: the number of samples</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">y_data</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="fm">__getitem__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">index</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        :param index: the index of sample</span>
+<span class="sd">        :return: the index-th distance matrix and the index-th sample</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_need_STNN</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">((</span><span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">distances</span><span class="p">[</span><span class="n">index</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float</span><span class="p">),</span>
+                              <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">temporal</span><span class="p">[</span><span class="n">index</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float</span><span class="p">)),</span> <span class="n">dim</span><span class="o">=-</span><span class="mi">1</span><span class="p">),</span> \
+                <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">x_data</span><span class="p">[</span><span class="n">index</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float</span><span class="p">),</span> \
+                <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">y_data</span><span class="p">[</span><span class="n">index</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float</span><span class="p">),</span> \
+                <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">id_data</span><span class="p">[</span><span class="n">index</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">distances</span><span class="p">[</span><span class="n">index</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float</span><span class="p">),</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">x_data</span><span class="p">[</span><span class="n">index</span><span class="p">],</span>
+                                                                                    <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float</span><span class="p">),</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">y_data</span><span class="p">[</span><span class="n">index</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float</span><span class="p">),</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">id_data</span><span class="p">[</span><span class="n">index</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float</span><span class="p">)</span>
+
+<div class="viewcode-block" id="baseDataset.scale">
+<a class="viewcode-back" href="../../gnnwr/datasets.html#gnnwr.datasets.baseDataset.scale">[docs]</a>
+    <span class="k">def</span> <span class="nf">scale</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">scale_fn</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">scale_params</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        scale the data by MinMaxScaler or StandardScaler</span>
+
+<span class="sd">        :param scale_fn: scale function</span>
+<span class="sd">        :param scale_params: scale parameters like MinMaxScaler or StandardScaler</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">scale_fn</span> <span class="o">==</span> <span class="s2">&quot;minmax_scale&quot;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">scale_fn</span> <span class="o">=</span> <span class="s2">&quot;minmax_scale&quot;</span>
+            <span class="n">x_scale_params</span> <span class="o">=</span> <span class="n">scale_params</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="c1"># y_scale_params = scale_params[1]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">x_scale_info</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;min&quot;</span><span class="p">:</span> <span class="n">x_scale_params</span><span class="o">.</span><span class="n">data_min_</span><span class="p">,</span> <span class="s2">&quot;max&quot;</span><span class="p">:</span> <span class="n">x_scale_params</span><span class="o">.</span><span class="n">data_max_</span><span class="p">}</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">x_data</span> <span class="o">=</span> <span class="n">x_scale_params</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">x_data</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="p">))</span>
+            <span class="c1"># self.y_scale_info = {&quot;min&quot;: y_scale_params.data_min_, &quot;max&quot;: y_scale_params.data_max_}</span>
+            <span class="c1"># self.y_data = y_scale_params.transform(pd.DataFrame(self.y_data, columns=self.y))</span>
+        <span class="k">elif</span> <span class="n">scale_fn</span> <span class="o">==</span> <span class="s2">&quot;standard_scale&quot;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">scale_fn</span> <span class="o">=</span> <span class="s2">&quot;standard_scale&quot;</span>
+            <span class="n">x_scale_params</span> <span class="o">=</span> <span class="n">scale_params</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="c1"># y_scale_params = scale_params[1]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">x_scale_info</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;mean&quot;</span><span class="p">:</span> <span class="n">x_scale_params</span><span class="o">.</span><span class="n">mean_</span><span class="p">,</span> <span class="s2">&quot;var&quot;</span><span class="p">:</span> <span class="n">x_scale_params</span><span class="o">.</span><span class="n">var_</span><span class="p">}</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">x_data</span> <span class="o">=</span> <span class="n">x_scale_params</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">x_data</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="p">))</span>
+            <span class="c1"># self.y_scale_info = {&quot;mean&quot;: y_scale_params.mean_, &quot;var&quot;: y_scale_params.var_}</span>
+            <span class="c1"># self.y_data = y_scale_params.transform(pd.DataFrame(self.y_data, columns=self.y))</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">getScaledDataframe</span><span class="p">()</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">x_data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">x_data</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span>
+            <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">datasize</span><span class="p">,</span> <span class="mi">1</span><span class="p">))),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="baseDataset.scale2">
+<a class="viewcode-back" href="../../gnnwr/datasets.html#gnnwr.datasets.baseDataset.scale2">[docs]</a>
+    <span class="k">def</span> <span class="nf">scale2</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">scale_fn</span><span class="p">,</span> <span class="n">scale_params</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        scale the data with the scale function and scale parameters</span>
+
+<span class="sd">        :param scale_fn: scale function</span>
+<span class="sd">        :param scale_params: scale parameters like max and min</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">scale_fn</span> <span class="o">==</span> <span class="s2">&quot;minmax_scale&quot;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">scale_fn</span> <span class="o">=</span> <span class="s2">&quot;minmax_scale&quot;</span>
+            <span class="n">x_scale_params</span> <span class="o">=</span> <span class="n">scale_params</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="c1"># y_scale_params = scale_params[1]</span>
+            <span class="c1"># self.x_data = self.x_data * (x_scale_params[&quot;max&quot;] - x_scale_params[&quot;min&quot;]) + x_scale_params[&quot;min&quot;]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">x_data</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">x_data</span> <span class="o">-</span> <span class="n">x_scale_params</span><span class="p">[</span><span class="s2">&quot;min&quot;</span><span class="p">])</span> <span class="o">/</span> <span class="p">(</span><span class="n">x_scale_params</span><span class="p">[</span><span class="s2">&quot;max&quot;</span><span class="p">]</span> <span class="o">-</span> <span class="n">x_scale_params</span><span class="p">[</span><span class="s2">&quot;min&quot;</span><span class="p">])</span>
+            <span class="c1"># self.y_data = self.y_data * (y_scale_params[&quot;max&quot;] - y_scale_params[&quot;min&quot;]) + y_scale_params[&quot;min&quot;]</span>
+        <span class="k">elif</span> <span class="n">scale_fn</span> <span class="o">==</span> <span class="s2">&quot;standard_scale&quot;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">scale_fn</span> <span class="o">=</span> <span class="s2">&quot;standard_scale&quot;</span>
+            <span class="n">x_scale_params</span> <span class="o">=</span> <span class="n">scale_params</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="c1"># y_scale_params = scale_params[1]</span>
+            <span class="c1"># self.x_data = self.x_data * np.sqrt(x_scale_params[&quot;var&quot;]) + x_scale_params[&quot;mean&quot;]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">x_data</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">x_data</span> <span class="o">-</span> <span class="n">x_scale_params</span><span class="p">[</span><span class="s1">&#39;mean&#39;</span><span class="p">])</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">x_scale_params</span><span class="p">[</span><span class="s2">&quot;var&quot;</span><span class="p">])</span>
+            <span class="c1"># self.y_data = self.y_data * np.sqrt(y_scale_params[&quot;var&quot;]) + y_scale_params[&quot;mean&quot;]</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">getScaledDataframe</span><span class="p">()</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">x_data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">x_data</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span>
+            <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">datasize</span><span class="p">,</span> <span class="mi">1</span><span class="p">))),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="baseDataset.getScaledDataframe">
+<a class="viewcode-back" href="../../gnnwr/datasets.html#gnnwr.datasets.baseDataset.getScaledDataframe">[docs]</a>
+    <span class="k">def</span> <span class="nf">getScaledDataframe</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        get the scaled dataframe</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">columns</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">y</span><span class="p">),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="n">scaledData</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">x_data</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">y_data</span><span class="p">),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">scaledDataframe</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">scaledData</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="n">columns</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="baseDataset.rescale">
+<a class="viewcode-back" href="../../gnnwr/datasets.html#gnnwr.datasets.baseDataset.rescale">[docs]</a>
+    <span class="k">def</span> <span class="nf">rescale</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        :param x: Input independent variable data</span>
+<span class="sd">        :param y: Input dependent variable data</span>
+<span class="sd">        :return: rescaled x and y</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">scale_fn</span> <span class="o">==</span> <span class="s2">&quot;minmax_scale&quot;</span><span class="p">:</span>
+            <span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">multiply</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">x_scale_info</span><span class="p">[</span><span class="s2">&quot;max&quot;</span><span class="p">]</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">x_scale_info</span><span class="p">[</span><span class="s2">&quot;min&quot;</span><span class="p">])</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">x_scale_info</span><span class="p">[</span><span class="s2">&quot;min&quot;</span><span class="p">]</span>
+            <span class="n">y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">multiply</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">y_scale_info</span><span class="p">[</span><span class="s2">&quot;max&quot;</span><span class="p">]</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">y_scale_info</span><span class="p">[</span><span class="s2">&quot;min&quot;</span><span class="p">])</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">y_scale_info</span><span class="p">[</span><span class="s2">&quot;min&quot;</span><span class="p">]</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">scale_fn</span> <span class="o">==</span> <span class="s2">&quot;standard_scale&quot;</span><span class="p">:</span>
+            <span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">multiply</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">x_scale_info</span><span class="p">[</span><span class="s2">&quot;var&quot;</span><span class="p">]))</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">x_scale_info</span><span class="p">[</span><span class="s2">&quot;mean&quot;</span><span class="p">]</span>
+            <span class="n">y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">multiply</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">y_scale_info</span><span class="p">[</span><span class="s2">&quot;var&quot;</span><span class="p">]))</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">y_scale_info</span><span class="p">[</span><span class="s2">&quot;mean&quot;</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;invalid process_fn&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span></div>
+
+
+<div class="viewcode-block" id="baseDataset.save">
+<a class="viewcode-back" href="../../gnnwr/datasets.html#gnnwr.datasets.baseDataset.save">[docs]</a>
+    <span class="k">def</span> <span class="nf">save</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dirname</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        save the dataset</span>
+
+<span class="sd">        :param dirname: save directory</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">dirname</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;dir is already exists&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">dataframe</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;dataframe is None&quot;</span><span class="p">)</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">dirname</span><span class="p">)</span>
+        <span class="n">x_scale_info</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">y_scale_info</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">x_scale_info</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">x_scale_info</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">dirname</span><span class="p">,</span> <span class="s2">&quot;dataset_info.json&quot;</span><span class="p">),</span> <span class="s2">&quot;w&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+            <span class="n">distance_scale_info</span> <span class="o">=</span> <span class="p">{}</span>
+            <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">distances_scale_param</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                <span class="n">distance_scale_info</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">distances_scale_param</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+            <span class="n">json</span><span class="o">.</span><span class="n">dump</span><span class="p">({</span><span class="s2">&quot;x&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="p">,</span> <span class="s2">&quot;y&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">y</span><span class="p">,</span> <span class="s2">&quot;id&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="s2">&quot;batch_size&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">batch_size</span><span class="p">,</span> <span class="s2">&quot;shuffle&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">shuffle</span><span class="p">,</span>
+                       <span class="s2">&quot;is_need_STNN&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_need_STNN</span><span class="p">,</span> <span class="s2">&quot;scale_fn&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">scale_fn</span><span class="p">,</span>
+                       <span class="s2">&quot;x_scale_info&quot;</span><span class="p">:</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">x_scale_info</span><span class="p">),</span> <span class="s2">&quot;y_scale_info&quot;</span><span class="p">:</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">y_scale_info</span><span class="p">),</span>
+                       <span class="s2">&quot;distance_scale_info&quot;</span><span class="p">:</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">distance_scale_info</span><span class="p">)</span>
+                       <span class="p">},</span> <span class="n">f</span><span class="p">)</span>
+        <span class="c1"># save the distance matrix</span>
+        <span class="n">np</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">dirname</span><span class="p">,</span> <span class="s2">&quot;distances.npy&quot;</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">distances</span><span class="p">)</span>
+        <span class="c1"># save dataframe</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dataframe</span><span class="o">.</span><span class="n">to_csv</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">dirname</span><span class="p">,</span> <span class="s2">&quot;dataframe.csv&quot;</span><span class="p">),</span> <span class="n">index</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">scaledDataframe</span><span class="o">.</span><span class="n">to_csv</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">dirname</span><span class="p">,</span> <span class="s2">&quot;scaledDataframe.csv&quot;</span><span class="p">),</span> <span class="n">index</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="baseDataset.read">
+<a class="viewcode-back" href="../../gnnwr/datasets.html#gnnwr.datasets.baseDataset.read">[docs]</a>
+    <span class="k">def</span> <span class="nf">read</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dirname</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        read the dataset by the directory</span>
+
+<span class="sd">        :param dirname: read directory</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">dirname</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;dir is not exists&quot;</span><span class="p">)</span>
+        <span class="c1"># read the information of dataset</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">dirname</span><span class="p">,</span> <span class="s2">&quot;dataset_info.json&quot;</span><span class="p">),</span> <span class="s2">&quot;r&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+            <span class="n">dataset_info</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">x</span> <span class="o">=</span> <span class="n">dataset_info</span><span class="p">[</span><span class="s2">&quot;x&quot;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">y</span> <span class="o">=</span> <span class="n">dataset_info</span><span class="p">[</span><span class="s2">&quot;y&quot;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">id</span> <span class="o">=</span> <span class="n">dataset_info</span><span class="p">[</span><span class="s2">&quot;id&quot;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">batch_size</span> <span class="o">=</span> <span class="n">dataset_info</span><span class="p">[</span><span class="s2">&quot;batch_size&quot;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">shuffle</span> <span class="o">=</span> <span class="n">dataset_info</span><span class="p">[</span><span class="s2">&quot;shuffle&quot;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">is_need_STNN</span> <span class="o">=</span> <span class="n">dataset_info</span><span class="p">[</span><span class="s2">&quot;is_need_STNN&quot;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">scale_fn</span> <span class="o">=</span> <span class="n">dataset_info</span><span class="p">[</span><span class="s2">&quot;scale_fn&quot;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">x_scale_info</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">dataset_info</span><span class="p">[</span><span class="s2">&quot;x_scale_info&quot;</span><span class="p">])</span>
+        <span class="c1"># self.y_scale_info = json.loads(dataset_info[&quot;y_scale_info&quot;])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">distances_scale_param</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">dataset_info</span><span class="p">[</span><span class="s2">&quot;distance_scale_info&quot;</span><span class="p">])</span>
+        <span class="n">x_scale_info</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">x_scale_info</span>
+        <span class="c1"># y_scale_info = self.y_scale_info</span>
+        <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">x_scale_info</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">x_scale_info</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+        <span class="c1"># for key, value in y_scale_info.items():</span>
+        <span class="c1">#     y_scale_info[key] = np.array(value)</span>
+        <span class="c1"># read the distance matrix</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">distances</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">dirname</span><span class="p">,</span> <span class="s2">&quot;distances.npy&quot;</span><span class="p">))</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+        <span class="c1"># read dataframe</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dataframe</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">dirname</span><span class="p">,</span> <span class="s2">&quot;dataframe.csv&quot;</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">x_data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dataframe</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span><span class="o">.</span><span class="n">values</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">datasize</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">x_data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">y_data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dataframe</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">y</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span><span class="o">.</span><span class="n">values</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">id_data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dataframe</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">int64</span><span class="p">)</span><span class="o">.</span><span class="n">values</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">coefsize</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">scale2</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">scale_fn</span><span class="p">,</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">x_scale_info</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">y_scale_info</span><span class="p">])</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="predictDataset">
+<a class="viewcode-back" href="../../gnnwr/datasets.html#gnnwr.datasets.predictDataset">[docs]</a>
+<span class="k">class</span> <span class="nc">predictDataset</span><span class="p">(</span><span class="n">Dataset</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Predict dataset is used to predict the dependent variable of the data.</span>
+
+<span class="sd">    :param data: dataframe</span>
+<span class="sd">    :param x_column: independent variable column name</span>
+<span class="sd">    :param process_fn: process function name</span>
+<span class="sd">    :param scale_info: process function parameters</span>
+<span class="sd">    :param is_need_STNN: whether need STNN</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">x_column</span><span class="p">,</span> <span class="n">process_fn</span><span class="o">=</span><span class="s2">&quot;minmax_scale&quot;</span><span class="p">,</span> <span class="n">scale_info</span><span class="o">=</span><span class="p">[],</span> <span class="n">is_need_STNN</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+
+        <span class="c1"># data = data.astype(np.float32)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dataframe</span> <span class="o">=</span> <span class="n">data</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">x</span> <span class="o">=</span> <span class="n">x_column</span>
+        <span class="k">if</span> <span class="n">data</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">x_data</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">datasize</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">coefsize</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">x_data</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="n">x_column</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span><span class="o">.</span><span class="n">values</span>  <span class="c1"># x_data is independent variables data</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">datasize</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">x_data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>  <span class="c1"># datasize is the number of samples</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">coefsize</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">x_column</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span>  <span class="c1"># coefsize is the number of coefficients</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">is_need_STNN</span> <span class="o">=</span> <span class="n">is_need_STNN</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">process_fn</span> <span class="o">=</span> <span class="n">process_fn</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">scale_info</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">scale_info_x</span> <span class="o">=</span> <span class="n">scale_info</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>  <span class="c1"># scale information of x_data</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">use_scale_info</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">use_scale_info</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="c1"># 数据预处理</span>
+        <span class="k">if</span> <span class="n">process_fn</span> <span class="o">==</span> <span class="s2">&quot;minmax_scale&quot;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">scale_fn</span> <span class="o">=</span> <span class="s2">&quot;minmax_scale&quot;</span>
+            <span class="c1"># stander = MinMaxScaler()</span>
+            <span class="c1"># self.x_data = stander.fit_transform(self.x_data)</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">use_scale_info</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">x_data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">minmax_scaler</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">x_data</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">scale_info_x</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">scale_info_x</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">x_data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">minmax_scaler</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">x_data</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">process_fn</span> <span class="o">==</span> <span class="s2">&quot;standard_scale&quot;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">scale_fn</span> <span class="o">=</span> <span class="s2">&quot;standard_scale&quot;</span>
+            <span class="c1"># stander = StandardScaler()</span>
+            <span class="c1"># self.x_data = stander.fit_transform(self.x_data)</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">use_scale_info</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">x_data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">standard_scaler</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">x_data</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">scale_info_x</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">scale_info_x</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">x_data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">standard_scaler</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">x_data</span><span class="p">)</span>
+
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;invalid process_fn&quot;</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">x_data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">x_data</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span>
+            <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">datasize</span><span class="p">,</span> <span class="mi">1</span><span class="p">))),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">distances</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">temporal</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="k">def</span> <span class="fm">__len__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        :return: the number of samples</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">x_data</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="fm">__getitem__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">index</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        :param index: sample index</span>
+<span class="sd">        :return: distance matrix and independent variable data and dependent variable data</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_need_STNN</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">((</span><span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">distances</span><span class="p">[</span><span class="n">index</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float</span><span class="p">),</span>
+                              <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">temporal</span><span class="p">[</span><span class="n">index</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float</span><span class="p">)),</span> <span class="n">dim</span><span class="o">=-</span><span class="mi">1</span><span class="p">),</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">x_data</span><span class="p">[</span><span class="n">index</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">distances</span><span class="p">[</span><span class="n">index</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float</span><span class="p">),</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">x_data</span><span class="p">[</span><span class="n">index</span><span class="p">],</span>
+                                                                                    <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float</span><span class="p">)</span>
+
+<div class="viewcode-block" id="predictDataset.rescale">
+<a class="viewcode-back" href="../../gnnwr/datasets.html#gnnwr.datasets.predictDataset.rescale">[docs]</a>
+    <span class="k">def</span> <span class="nf">rescale</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        rescale the attribute data</span>
+
+<span class="sd">        :param x: Input attribute data</span>
+<span class="sd">        :return: rescaled attribute data</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">scale_fn</span> <span class="o">==</span> <span class="s2">&quot;minmax_scale&quot;</span><span class="p">:</span>
+            <span class="n">x</span> <span class="o">=</span> <span class="n">x</span> <span class="o">*</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">scale_info_x</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">scale_info_x</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">scale_info_x</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">scale_fn</span> <span class="o">==</span> <span class="s2">&quot;standard_scale&quot;</span><span class="p">:</span>
+            <span class="n">x</span> <span class="o">=</span> <span class="n">x</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">scale_info_x</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">scale_info_x</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;invalid process_fn&quot;</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">x</span></div>
+
+
+<div class="viewcode-block" id="predictDataset.minmax_scaler">
+<a class="viewcode-back" href="../../gnnwr/datasets.html#gnnwr.datasets.predictDataset.minmax_scaler">[docs]</a>
+    <span class="k">def</span> <span class="nf">minmax_scaler</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="nb">min</span><span class="o">=</span><span class="p">[],</span> <span class="nb">max</span><span class="o">=</span><span class="p">[]):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        function of minmax scaler</span>
+
+<span class="sd">        :param x: Input attribute data</span>
+<span class="sd">        :param min: minimum value of each attribute</span>
+<span class="sd">        :param max: maximum value of each attribute</span>
+<span class="sd">        :return: Output attribute data</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="nb">min</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">x</span> <span class="o">=</span> <span class="p">(</span><span class="n">x</span> <span class="o">-</span> <span class="n">x</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">))</span> <span class="o">/</span> <span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span> <span class="o">-</span> <span class="n">x</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">x</span> <span class="o">=</span> <span class="p">(</span><span class="n">x</span> <span class="o">-</span> <span class="nb">min</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="nb">max</span> <span class="o">-</span> <span class="nb">min</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">x</span></div>
+
+
+<div class="viewcode-block" id="predictDataset.standard_scaler">
+<a class="viewcode-back" href="../../gnnwr/datasets.html#gnnwr.datasets.predictDataset.standard_scaler">[docs]</a>
+    <span class="k">def</span> <span class="nf">standard_scaler</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">mean</span><span class="o">=</span><span class="p">[],</span> <span class="n">std</span><span class="o">=</span><span class="p">[]):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        function of standard scaler</span>
+
+<span class="sd">        :param x: Input attribute data</span>
+<span class="sd">        :param mean: mean value of each attribute</span>
+<span class="sd">        :param std: standard deviation of each attribute</span>
+<span class="sd">        :return: Output attribute data</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">mean</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">x</span> <span class="o">=</span> <span class="p">(</span><span class="n">x</span> <span class="o">-</span> <span class="n">x</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">))</span> <span class="o">/</span> <span class="n">x</span><span class="o">.</span><span class="n">std</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">x</span> <span class="o">=</span> <span class="p">(</span><span class="n">x</span> <span class="o">-</span> <span class="n">mean</span><span class="p">)</span> <span class="o">/</span> <span class="n">std</span>
+        <span class="k">return</span> <span class="n">x</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="BasicDistance">
+<a class="viewcode-back" href="../../gnnwr/datasets.html#gnnwr.datasets.BasicDistance">[docs]</a>
+<span class="k">def</span> <span class="nf">BasicDistance</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Calculate the distance between two points</span>
+
+<span class="sd">    :param x: Input point coordinate data</span>
+<span class="sd">    :param y: Input target point coordinate data</span>
+<span class="sd">    :return: distance matrix</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+    <span class="n">y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">(</span><span class="n">y</span><span class="p">)</span>
+    <span class="n">dist</span> <span class="o">=</span> <span class="n">distance</span><span class="o">.</span><span class="n">cdist</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="s1">&#39;euclidean&#39;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">dist</span>  <span class="c1"># np.float32(np.sqrt(np.sum((x[:, np.newaxis, :] - y) ** 2, axis=2)))</span></div>
+
+
+
+<div class="viewcode-block" id="Manhattan_distance">
+<a class="viewcode-back" href="../../gnnwr/datasets.html#gnnwr.datasets.Manhattan_distance">[docs]</a>
+<span class="k">def</span> <span class="nf">Manhattan_distance</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Calculate the Manhattan distance between two points</span>
+
+<span class="sd">    :param x: Input point coordinate data</span>
+<span class="sd">    :param y: Input target point coordinate data</span>
+<span class="sd">    :return: distance matrix</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">x</span><span class="p">[:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">,</span> <span class="p">:]</span> <span class="o">-</span> <span class="n">y</span><span class="p">),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">2</span><span class="p">))</span></div>
+
+
+
+<div class="viewcode-block" id="init_dataset">
+<a class="viewcode-back" href="../../gnnwr/datasets.html#gnnwr.datasets.init_dataset">[docs]</a>
+<span class="k">def</span> <span class="nf">init_dataset</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">test_ratio</span><span class="p">,</span> <span class="n">valid_ratio</span><span class="p">,</span> <span class="n">x_column</span><span class="p">,</span> <span class="n">y_column</span><span class="p">,</span> <span class="n">spatial_column</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">temp_column</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                 <span class="n">id_column</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">sample_seed</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">process_fn</span><span class="o">=</span><span class="s2">&quot;minmax_scale&quot;</span><span class="p">,</span> <span class="n">batch_size</span><span class="o">=</span><span class="mi">32</span><span class="p">,</span> <span class="n">shuffle</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                 <span class="n">use_class</span><span class="o">=</span><span class="n">baseDataset</span><span class="p">,</span>
+                 <span class="n">spatial_fun</span><span class="o">=</span><span class="n">BasicDistance</span><span class="p">,</span> <span class="n">temporal_fun</span><span class="o">=</span><span class="n">Manhattan_distance</span><span class="p">,</span> <span class="n">max_val_size</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span> <span class="n">max_test_size</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span>
+                 <span class="n">from_for_cv</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">is_need_STNN</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">Reference</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">simple_distance</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Initialize the dataset and return the training set, validation set and test set for the model</span>
+
+<span class="sd">    :param data: dataset</span>
+<span class="sd">    :param test_ratio: test data ratio</span>
+<span class="sd">    :param valid_ratio: valid data ratio</span>
+<span class="sd">    :param x_column: input attribute column name</span>
+<span class="sd">    :param y_column: output attribute column name</span>
+<span class="sd">    :param spatial_column: spatial attribute column name</span>
+<span class="sd">    :param temp_column: temporal attribute column name</span>
+<span class="sd">    :param sample_seed: random seed</span>
+<span class="sd">    :param process_fn: data pre-process function</span>
+<span class="sd">    :param batch_size: batch size</span>
+<span class="sd">    :param max_val_size: max valid data size in one injection</span>
+<span class="sd">    :param max_test_size: max test data size in one injection</span>
+<span class="sd">    :param shuffle: shuffle data</span>
+<span class="sd">    :param use_class: dataset class</span>
+<span class="sd">    :param spatial_fun: spatial distance calculate function</span>
+<span class="sd">    :param temporal_fun: temporal distance calculate function</span>
+<span class="sd">    :param from_for_cv: the start index of the data for cross validation</span>
+<span class="sd">    :param is_need_STNN: whether to use STNN</span>
+<span class="sd">    :param Reference: reference points to calculate the distance</span>
+<span class="sd">    :param simple_distance: whether to use simple distance function to calculate the distance</span>
+<span class="sd">    :return: train dataset, valid dataset, test dataset</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">spatial_fun</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="c1"># if dist_fun is None, raise error</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="s2">&quot;dist_fun must be a function that can process the data&quot;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">spatial_column</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="c1"># if dist_column is None, raise error</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="s2">&quot;dist_column must be a column name in data&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">id_column</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">id_column</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;id&#39;</span><span class="p">]</span>
+        <span class="k">if</span> <span class="s1">&#39;id&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">data</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+            <span class="n">data</span><span class="p">[</span><span class="s1">&#39;id&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s2">&quot;id_column is None and use default id column in data&quot;</span><span class="p">,</span> <span class="ne">RuntimeWarning</span><span class="p">)</span>
+    <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">seed</span><span class="p">(</span><span class="n">sample_seed</span><span class="p">)</span>
+    <span class="n">data</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="n">frac</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>  <span class="c1"># shuffle data</span>
+    <span class="n">scaler_x</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">scaler_y</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="c1"># data pre-process</span>
+    <span class="k">if</span> <span class="n">process_fn</span> <span class="o">==</span> <span class="s2">&quot;minmax_scale&quot;</span><span class="p">:</span>
+        <span class="n">scaler_x</span> <span class="o">=</span> <span class="n">MinMaxScaler</span><span class="p">()</span>
+        <span class="n">scaler_y</span> <span class="o">=</span> <span class="n">MinMaxScaler</span><span class="p">()</span>
+    <span class="k">elif</span> <span class="n">process_fn</span> <span class="o">==</span> <span class="s2">&quot;standard_scale&quot;</span><span class="p">:</span>
+        <span class="n">scaler_x</span> <span class="o">=</span> <span class="n">StandardScaler</span><span class="p">()</span>
+        <span class="n">scaler_y</span> <span class="o">=</span> <span class="n">StandardScaler</span><span class="p">()</span>
+    <span class="n">scaler_params_x</span> <span class="o">=</span> <span class="n">scaler_x</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="n">x_column</span><span class="p">])</span>
+    <span class="n">scaler_params_y</span> <span class="o">=</span> <span class="n">scaler_y</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="n">y_column</span><span class="p">])</span>
+    <span class="n">scaler_params</span> <span class="o">=</span> <span class="p">[</span><span class="n">scaler_params_x</span><span class="p">,</span> <span class="n">scaler_params_y</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">process_fn</span> <span class="o">==</span> <span class="s2">&quot;minmax_scale&quot;</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;x_min:&quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">scaler_params_x</span><span class="o">.</span><span class="n">data_min_</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot;;  x_max:&quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">scaler_params_x</span><span class="o">.</span><span class="n">data_max_</span><span class="p">))</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;y_min:&quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">scaler_params_y</span><span class="o">.</span><span class="n">data_min_</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot;;  y_max:&quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">scaler_params_y</span><span class="o">.</span><span class="n">data_max_</span><span class="p">))</span>
+    <span class="k">elif</span> <span class="n">process_fn</span> <span class="o">==</span> <span class="s2">&quot;standard_scale&quot;</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;x_mean:&quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">scaler_params_x</span><span class="o">.</span><span class="n">mean_</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot;;  x_var:&quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">scaler_params_x</span><span class="o">.</span><span class="n">var_</span><span class="p">))</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;y_mean:&quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">scaler_params_y</span><span class="o">.</span><span class="n">mean_</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot;;  y_var:&quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">scaler_params_y</span><span class="o">.</span><span class="n">var_</span><span class="p">))</span>
+
+    <span class="c1"># data split</span>
+    <span class="n">test_data</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="nb">int</span><span class="p">((</span><span class="mi">1</span> <span class="o">-</span> <span class="n">test_ratio</span><span class="p">)</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">)):]</span>
+    <span class="n">train_data</span> <span class="o">=</span> <span class="n">data</span><span class="p">[:</span><span class="nb">int</span><span class="p">((</span><span class="mi">1</span> <span class="o">-</span> <span class="n">test_ratio</span><span class="p">)</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">))]</span>
+    <span class="n">val_data</span> <span class="o">=</span> <span class="n">train_data</span><span class="p">[</span>
+               <span class="nb">int</span><span class="p">(</span><span class="n">from_for_cv</span> <span class="o">*</span> <span class="n">valid_ratio</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">train_data</span><span class="p">)):</span><span class="nb">int</span><span class="p">((</span><span class="mi">1</span> <span class="o">+</span> <span class="n">from_for_cv</span><span class="p">)</span> <span class="o">*</span> <span class="n">valid_ratio</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">train_data</span><span class="p">))]</span>
+    <span class="n">train_data</span> <span class="o">=</span> <span class="n">pandas</span><span class="o">.</span><span class="n">concat</span><span class="p">([</span><span class="n">train_data</span><span class="p">[:</span><span class="nb">int</span><span class="p">(</span><span class="n">from_for_cv</span> <span class="o">*</span> <span class="n">valid_ratio</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">train_data</span><span class="p">))],</span>
+                                <span class="n">train_data</span><span class="p">[</span><span class="nb">int</span><span class="p">((</span><span class="mi">1</span> <span class="o">+</span> <span class="n">from_for_cv</span><span class="p">)</span> <span class="o">*</span> <span class="n">valid_ratio</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">train_data</span><span class="p">)):]])</span>
+
+    <span class="c1"># Use the parameters of the dataset to normalize the train_dataset, val_dataset, and test_dataset</span>
+    <span class="n">train_dataset</span> <span class="o">=</span> <span class="n">use_class</span><span class="p">(</span><span class="n">train_data</span><span class="p">,</span> <span class="n">x_column</span><span class="p">,</span> <span class="n">y_column</span><span class="p">,</span> <span class="n">id_column</span><span class="p">,</span> <span class="n">is_need_STNN</span><span class="p">)</span>
+    <span class="n">val_dataset</span> <span class="o">=</span> <span class="n">use_class</span><span class="p">(</span><span class="n">val_data</span><span class="p">,</span> <span class="n">x_column</span><span class="p">,</span> <span class="n">y_column</span><span class="p">,</span> <span class="n">id_column</span><span class="p">,</span> <span class="n">is_need_STNN</span><span class="p">)</span>
+    <span class="n">test_dataset</span> <span class="o">=</span> <span class="n">use_class</span><span class="p">(</span><span class="n">test_data</span><span class="p">,</span> <span class="n">x_column</span><span class="p">,</span> <span class="n">y_column</span><span class="p">,</span> <span class="n">id_column</span><span class="p">,</span> <span class="n">is_need_STNN</span><span class="p">)</span>
+    <span class="n">train_dataset</span><span class="o">.</span><span class="n">scale</span><span class="p">(</span><span class="n">process_fn</span><span class="p">,</span> <span class="n">scaler_params</span><span class="p">)</span>
+    <span class="n">val_dataset</span><span class="o">.</span><span class="n">scale</span><span class="p">(</span><span class="n">process_fn</span><span class="p">,</span> <span class="n">scaler_params</span><span class="p">)</span>
+    <span class="n">test_dataset</span><span class="o">.</span><span class="n">scale</span><span class="p">(</span><span class="n">process_fn</span><span class="p">,</span> <span class="n">scaler_params</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">Reference</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">reference_data</span> <span class="o">=</span> <span class="n">train_data</span>
+    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">Reference</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">Reference</span> <span class="o">==</span> <span class="s2">&quot;train&quot;</span><span class="p">:</span>
+            <span class="n">reference_data</span> <span class="o">=</span> <span class="n">train_data</span>
+        <span class="k">elif</span> <span class="n">Reference</span> <span class="o">==</span> <span class="s2">&quot;train_val&quot;</span><span class="p">:</span>
+            <span class="n">reference_data</span> <span class="o">=</span> <span class="n">pandas</span><span class="o">.</span><span class="n">concat</span><span class="p">([</span><span class="n">train_data</span><span class="p">,</span> <span class="n">val_data</span><span class="p">])</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Reference str must be &#39;train&#39; or &#39;train_val&#39;&quot;</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">reference_data</span> <span class="o">=</span> <span class="n">Reference</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">reference_data</span><span class="p">,</span> <span class="n">pandas</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;reference_data must be a pandas.DataFrame&quot;</span><span class="p">)</span>
+    <span class="n">train_dataset</span><span class="o">.</span><span class="n">reference</span><span class="p">,</span> <span class="n">val_dataset</span><span class="o">.</span><span class="n">reference</span><span class="p">,</span> <span class="n">test_dataset</span><span class="o">.</span><span class="n">reference</span> <span class="o">=</span> <span class="n">reference_data</span><span class="p">,</span> <span class="n">reference_data</span><span class="p">,</span> <span class="n">reference_data</span>
+    <span class="n">train_dataset</span><span class="o">.</span><span class="n">spatial_column</span> <span class="o">=</span> <span class="n">val_dataset</span><span class="o">.</span><span class="n">spatial_column</span> <span class="o">=</span> <span class="n">test_dataset</span><span class="o">.</span><span class="n">spatial_column</span> <span class="o">=</span> <span class="n">spatial_column</span>
+    <span class="n">train_dataset</span><span class="o">.</span><span class="n">x_column</span> <span class="o">=</span> <span class="n">val_dataset</span><span class="o">.</span><span class="n">x_column</span> <span class="o">=</span> <span class="n">test_dataset</span><span class="o">.</span><span class="n">x_column</span> <span class="o">=</span> <span class="n">x_column</span>
+    <span class="n">train_dataset</span><span class="o">.</span><span class="n">y_column</span> <span class="o">=</span> <span class="n">val_dataset</span><span class="o">.</span><span class="n">y_column</span> <span class="o">=</span> <span class="n">test_dataset</span><span class="o">.</span><span class="n">y_column</span> <span class="o">=</span> <span class="n">y_column</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">is_need_STNN</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">simple_distance</span><span class="p">:</span>
+            <span class="c1"># if not use STNN, calculate spatial/temporal distance matrix and concatenate them</span>
+            <span class="n">train_dataset</span><span class="o">.</span><span class="n">distances</span> <span class="o">=</span> <span class="n">spatial_fun</span><span class="p">(</span>
+                <span class="n">train_data</span><span class="p">[</span><span class="n">spatial_column</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">,</span> <span class="n">reference_data</span><span class="p">[</span><span class="n">spatial_column</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">)</span>  <span class="c1"># 计算train距离矩阵</span>
+            <span class="n">val_dataset</span><span class="o">.</span><span class="n">distances</span> <span class="o">=</span> <span class="n">spatial_fun</span><span class="p">(</span>
+                <span class="n">val_data</span><span class="p">[</span><span class="n">spatial_column</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">,</span> <span class="n">reference_data</span><span class="p">[</span><span class="n">spatial_column</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">)</span>  <span class="c1"># 计算val距离矩阵</span>
+            <span class="n">test_dataset</span><span class="o">.</span><span class="n">distances</span> <span class="o">=</span> <span class="n">spatial_fun</span><span class="p">(</span>
+                <span class="n">test_data</span><span class="p">[</span><span class="n">spatial_column</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">,</span> <span class="n">reference_data</span><span class="p">[</span><span class="n">spatial_column</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">)</span>  <span class="c1"># 计算test距离矩阵</span>
+
+            <span class="k">if</span> <span class="n">temp_column</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="c1"># if temp_column is not None, calculate temporal distance matrix</span>
+                <span class="n">train_dataset</span><span class="o">.</span><span class="n">temporal</span> <span class="o">=</span> <span class="n">temporal_fun</span><span class="p">(</span>
+                    <span class="n">train_data</span><span class="p">[</span><span class="n">temp_column</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">,</span> <span class="n">reference_data</span><span class="p">[</span><span class="n">temp_column</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">)</span>
+                <span class="n">val_dataset</span><span class="o">.</span><span class="n">temporal</span> <span class="o">=</span> <span class="n">temporal_fun</span><span class="p">(</span>
+                    <span class="n">val_data</span><span class="p">[</span><span class="n">temp_column</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">,</span> <span class="n">reference_data</span><span class="p">[</span><span class="n">temp_column</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">)</span>
+                <span class="n">test_dataset</span><span class="o">.</span><span class="n">temporal</span> <span class="o">=</span> <span class="n">temporal_fun</span><span class="p">(</span>
+                    <span class="n">test_data</span><span class="p">[</span><span class="n">temp_column</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">,</span> <span class="n">reference_data</span><span class="p">[</span><span class="n">temp_column</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">)</span>
+
+                <span class="n">train_dataset</span><span class="o">.</span><span class="n">distances</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(</span>
+                    <span class="p">(</span><span class="n">train_dataset</span><span class="o">.</span><span class="n">distances</span><span class="p">[:,</span> <span class="p">:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">],</span> <span class="n">train_dataset</span><span class="o">.</span><span class="n">temporal</span><span class="p">[:,</span> <span class="p">:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">]),</span>
+                    <span class="n">axis</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>  <span class="c1"># concatenate spatial and temporal distance matrix</span>
+                <span class="n">val_dataset</span><span class="o">.</span><span class="n">distances</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(</span>
+                    <span class="p">(</span><span class="n">val_dataset</span><span class="o">.</span><span class="n">distances</span><span class="p">[:,</span> <span class="p">:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">],</span> <span class="n">val_dataset</span><span class="o">.</span><span class="n">temporal</span><span class="p">[:,</span> <span class="p">:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">]),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+                <span class="n">test_dataset</span><span class="o">.</span><span class="n">distances</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(</span>
+                    <span class="p">(</span><span class="n">test_dataset</span><span class="o">.</span><span class="n">distances</span><span class="p">[:,</span> <span class="p">:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">],</span> <span class="n">test_dataset</span><span class="o">.</span><span class="n">temporal</span><span class="p">[:,</span> <span class="p">:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">]),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">train_dataset</span><span class="o">.</span><span class="n">distances</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="n">train_data</span><span class="p">[</span><span class="n">spatial_column</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">[:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">,</span> <span class="p">:],</span>
+                                                <span class="nb">len</span><span class="p">(</span><span class="n">reference_data</span><span class="p">),</span>
+                                                <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+            <span class="n">train_temp_distance</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="n">reference_data</span><span class="p">[</span><span class="n">spatial_column</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">[:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">,</span> <span class="p">:],</span>
+                                            <span class="n">train_dataset</span><span class="o">.</span><span class="n">datasize</span><span class="p">,</span>
+                                            <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+            <span class="n">train_dataset</span><span class="o">.</span><span class="n">distances</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(</span>
+                <span class="p">(</span><span class="n">train_dataset</span><span class="o">.</span><span class="n">distances</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="n">train_temp_distance</span><span class="p">,</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">))),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+
+            <span class="n">val_dataset</span><span class="o">.</span><span class="n">distances</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="n">val_data</span><span class="p">[</span><span class="n">spatial_column</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">[:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">,</span> <span class="p">:],</span> <span class="nb">len</span><span class="p">(</span><span class="n">reference_data</span><span class="p">),</span>
+                                              <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+            <span class="n">val_temp_distance</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="n">reference_data</span><span class="p">[</span><span class="n">spatial_column</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">[:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">,</span> <span class="p">:],</span> <span class="n">val_dataset</span><span class="o">.</span><span class="n">datasize</span><span class="p">,</span>
+                                          <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+            <span class="n">val_dataset</span><span class="o">.</span><span class="n">distances</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">((</span><span class="n">val_dataset</span><span class="o">.</span><span class="n">distances</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="n">val_temp_distance</span><span class="p">,</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">))),</span>
+                                                   <span class="n">axis</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+
+            <span class="n">test_dataset</span><span class="o">.</span><span class="n">distances</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="n">test_data</span><span class="p">[</span><span class="n">spatial_column</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">[:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">,</span> <span class="p">:],</span> <span class="nb">len</span><span class="p">(</span><span class="n">reference_data</span><span class="p">),</span>
+                                               <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+            <span class="n">test_temp_distance</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="n">reference_data</span><span class="p">[</span><span class="n">spatial_column</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">[:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">,</span> <span class="p">:],</span>
+                                           <span class="n">test_dataset</span><span class="o">.</span><span class="n">datasize</span><span class="p">,</span>
+                                           <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+            <span class="n">test_dataset</span><span class="o">.</span><span class="n">distances</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(</span>
+                <span class="p">(</span><span class="n">test_dataset</span><span class="o">.</span><span class="n">distances</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="n">test_temp_distance</span><span class="p">,</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">))),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+            <span class="c1"># if temp_column is not None, calculate temporal point matrix</span>
+            <span class="k">if</span> <span class="n">temp_column</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">train_dataset</span><span class="o">.</span><span class="n">temporal</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="n">train_data</span><span class="p">[</span><span class="n">temp_column</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">[:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">,</span> <span class="p">:],</span>
+                                                   <span class="nb">len</span><span class="p">(</span><span class="n">reference_data</span><span class="p">),</span>
+                                                   <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+                <span class="n">train_temp_temporal</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="n">reference_data</span><span class="p">[</span><span class="n">temp_column</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">[:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">,</span> <span class="p">:],</span>
+                                                <span class="n">train_dataset</span><span class="o">.</span><span class="n">datasize</span><span class="p">,</span>
+                                                <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+                <span class="n">train_dataset</span><span class="o">.</span><span class="n">temporal</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(</span>
+                    <span class="p">(</span><span class="n">train_dataset</span><span class="o">.</span><span class="n">temporal</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="n">train_temp_temporal</span><span class="p">,</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">))),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+
+                <span class="n">val_dataset</span><span class="o">.</span><span class="n">temporal</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="n">val_data</span><span class="p">[</span><span class="n">temp_column</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">[:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">,</span> <span class="p">:],</span> <span class="nb">len</span><span class="p">(</span><span class="n">reference_data</span><span class="p">),</span>
+                                                 <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+                <span class="n">val_temp_temporal</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="n">reference_data</span><span class="p">[</span><span class="n">temp_column</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">[:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">,</span> <span class="p">:],</span>
+                                              <span class="n">val_dataset</span><span class="o">.</span><span class="n">datasize</span><span class="p">,</span>
+                                              <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+                <span class="n">val_dataset</span><span class="o">.</span><span class="n">temporal</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(</span>
+                    <span class="p">(</span><span class="n">val_dataset</span><span class="o">.</span><span class="n">temporal</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="n">val_temp_temporal</span><span class="p">,</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">))),</span>
+                    <span class="n">axis</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+
+                <span class="n">test_dataset</span><span class="o">.</span><span class="n">temporal</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="n">test_data</span><span class="p">[</span><span class="n">temp_column</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">[:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">,</span> <span class="p">:],</span> <span class="nb">len</span><span class="p">(</span><span class="n">reference_data</span><span class="p">),</span>
+                                                  <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+                <span class="n">test_temp_temporal</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="n">reference_data</span><span class="p">[</span><span class="n">temp_column</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">[:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">,</span> <span class="p">:],</span>
+                                               <span class="n">test_dataset</span><span class="o">.</span><span class="n">datasize</span><span class="p">,</span>
+                                               <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+                <span class="n">test_dataset</span><span class="o">.</span><span class="n">temporal</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(</span>
+                    <span class="p">(</span><span class="n">test_dataset</span><span class="o">.</span><span class="n">temporal</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="n">test_temp_temporal</span><span class="p">,</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">))),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+            <span class="n">train_dataset</span><span class="o">.</span><span class="n">distances</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(</span>
+                <span class="p">(</span><span class="n">train_dataset</span><span class="o">.</span><span class="n">distances</span><span class="p">,</span> <span class="n">train_dataset</span><span class="o">.</span><span class="n">temporal</span><span class="p">),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+            <span class="n">val_dataset</span><span class="o">.</span><span class="n">distances</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(</span>
+                <span class="p">(</span><span class="n">val_dataset</span><span class="o">.</span><span class="n">distances</span><span class="p">,</span> <span class="n">val_dataset</span><span class="o">.</span><span class="n">temporal</span><span class="p">),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+            <span class="n">test_dataset</span><span class="o">.</span><span class="n">distances</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(</span>
+                <span class="p">(</span><span class="n">test_dataset</span><span class="o">.</span><span class="n">distances</span><span class="p">,</span> <span class="n">test_dataset</span><span class="o">.</span><span class="n">temporal</span><span class="p">),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="c1"># if use STNN, calculate spatial/temporal point matrix</span>
+        <span class="n">train_dataset</span><span class="o">.</span><span class="n">distances</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="n">train_data</span><span class="p">[</span><span class="n">spatial_column</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">[:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">,</span> <span class="p">:],</span> <span class="nb">len</span><span class="p">(</span><span class="n">reference_data</span><span class="p">),</span>
+                                            <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">train_temp_distance</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="n">reference_data</span><span class="p">[</span><span class="n">spatial_column</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">[:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">,</span> <span class="p">:],</span> <span class="n">train_dataset</span><span class="o">.</span><span class="n">datasize</span><span class="p">,</span>
+                                        <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">train_dataset</span><span class="o">.</span><span class="n">distances</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(</span>
+            <span class="p">(</span><span class="n">train_dataset</span><span class="o">.</span><span class="n">distances</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="n">train_temp_distance</span><span class="p">,</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">))),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+
+        <span class="n">val_dataset</span><span class="o">.</span><span class="n">distances</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="n">val_data</span><span class="p">[</span><span class="n">spatial_column</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">[:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">,</span> <span class="p">:],</span> <span class="nb">len</span><span class="p">(</span><span class="n">reference_data</span><span class="p">),</span>
+                                          <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">val_temp_distance</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="n">reference_data</span><span class="p">[</span><span class="n">spatial_column</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">[:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">,</span> <span class="p">:],</span> <span class="n">val_dataset</span><span class="o">.</span><span class="n">datasize</span><span class="p">,</span>
+                                      <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">val_dataset</span><span class="o">.</span><span class="n">distances</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">((</span><span class="n">val_dataset</span><span class="o">.</span><span class="n">distances</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="n">val_temp_distance</span><span class="p">,</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">))),</span>
+                                               <span class="n">axis</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+
+        <span class="n">test_dataset</span><span class="o">.</span><span class="n">distances</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="n">test_data</span><span class="p">[</span><span class="n">spatial_column</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">[:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">,</span> <span class="p">:],</span> <span class="nb">len</span><span class="p">(</span><span class="n">reference_data</span><span class="p">),</span>
+                                           <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">test_temp_distance</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="n">reference_data</span><span class="p">[</span><span class="n">spatial_column</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">[:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">,</span> <span class="p">:],</span> <span class="n">test_dataset</span><span class="o">.</span><span class="n">datasize</span><span class="p">,</span>
+                                       <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">test_dataset</span><span class="o">.</span><span class="n">distances</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(</span>
+            <span class="p">(</span><span class="n">test_dataset</span><span class="o">.</span><span class="n">distances</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="n">test_temp_distance</span><span class="p">,</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">))),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+        <span class="c1"># if temp_column is not None, calculate temporal point matrix</span>
+        <span class="k">if</span> <span class="n">temp_column</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">train_dataset</span><span class="o">.</span><span class="n">temporal</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="n">train_data</span><span class="p">[</span><span class="n">temp_column</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">[:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">,</span> <span class="p">:],</span> <span class="nb">len</span><span class="p">(</span><span class="n">reference_data</span><span class="p">),</span>
+                                               <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+            <span class="n">train_temp_temporal</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="n">reference_data</span><span class="p">[</span><span class="n">temp_column</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">[:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">,</span> <span class="p">:],</span>
+                                            <span class="n">train_dataset</span><span class="o">.</span><span class="n">datasize</span><span class="p">,</span>
+                                            <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+            <span class="n">train_dataset</span><span class="o">.</span><span class="n">temporal</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(</span>
+                <span class="p">(</span><span class="n">train_dataset</span><span class="o">.</span><span class="n">temporal</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="n">train_temp_temporal</span><span class="p">,</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">))),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+
+            <span class="n">val_dataset</span><span class="o">.</span><span class="n">temporal</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="n">val_data</span><span class="p">[</span><span class="n">temp_column</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">[:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">,</span> <span class="p">:],</span> <span class="nb">len</span><span class="p">(</span><span class="n">reference_data</span><span class="p">),</span>
+                                             <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+            <span class="n">val_temp_temporal</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="n">reference_data</span><span class="p">[</span><span class="n">temp_column</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">[:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">,</span> <span class="p">:],</span> <span class="n">val_dataset</span><span class="o">.</span><span class="n">datasize</span><span class="p">,</span>
+                                          <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+            <span class="n">val_dataset</span><span class="o">.</span><span class="n">temporal</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">((</span><span class="n">val_dataset</span><span class="o">.</span><span class="n">temporal</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="n">val_temp_temporal</span><span class="p">,</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">))),</span>
+                                                  <span class="n">axis</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+
+            <span class="n">test_dataset</span><span class="o">.</span><span class="n">temporal</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="n">test_data</span><span class="p">[</span><span class="n">temp_column</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">[:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">,</span> <span class="p">:],</span> <span class="nb">len</span><span class="p">(</span><span class="n">reference_data</span><span class="p">),</span>
+                                              <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+            <span class="n">test_temp_temporal</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="n">reference_data</span><span class="p">[</span><span class="n">temp_column</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">[:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">,</span> <span class="p">:],</span> <span class="n">test_dataset</span><span class="o">.</span><span class="n">datasize</span><span class="p">,</span>
+                                           <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+            <span class="n">test_dataset</span><span class="o">.</span><span class="n">temporal</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(</span>
+                <span class="p">(</span><span class="n">test_dataset</span><span class="o">.</span><span class="n">temporal</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="n">test_temp_temporal</span><span class="p">,</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">))),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+    <span class="n">train_dataset</span><span class="o">.</span><span class="n">simple_distance</span> <span class="o">=</span> <span class="n">simple_distance</span>
+    <span class="c1"># initialize dataloader for train/val/test dataset</span>
+    <span class="c1"># set batch_size for train_dataset as batch_size</span>
+    <span class="c1"># set batch_size for val_dataset as max_val_size</span>
+    <span class="c1"># set batch_size for test_dataset as max_test_size</span>
+    <span class="k">if</span> <span class="n">max_val_size</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span> <span class="n">max_val_size</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">val_dataset</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">max_test_size</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span> <span class="n">max_test_size</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">test_dataset</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">process_fn</span> <span class="o">==</span> <span class="s2">&quot;minmax_scale&quot;</span><span class="p">:</span>
+        <span class="n">distance_scale</span> <span class="o">=</span> <span class="n">MinMaxScaler</span><span class="p">()</span>
+        <span class="n">temporal_scale</span> <span class="o">=</span> <span class="n">MinMaxScaler</span><span class="p">()</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">distance_scale</span> <span class="o">=</span> <span class="n">StandardScaler</span><span class="p">()</span>
+        <span class="n">temporal_scale</span> <span class="o">=</span> <span class="n">StandardScaler</span><span class="p">()</span>
+    <span class="c1"># scale distance matrix</span>
+    <span class="n">train_distance_len</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">train_dataset</span><span class="o">.</span><span class="n">distances</span><span class="p">)</span>
+    <span class="n">val_distance_len</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">val_dataset</span><span class="o">.</span><span class="n">distances</span><span class="p">)</span>
+    <span class="n">distances</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">((</span><span class="n">train_dataset</span><span class="o">.</span><span class="n">distances</span><span class="p">,</span> <span class="n">val_dataset</span><span class="o">.</span><span class="n">distances</span><span class="p">,</span> <span class="n">test_dataset</span><span class="o">.</span><span class="n">distances</span><span class="p">),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+    <span class="n">distances</span> <span class="o">=</span> <span class="n">distance_scale</span><span class="o">.</span><span class="n">fit_transform</span><span class="p">(</span><span class="n">distances</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">distances</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]))</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">distances</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">process_fn</span> <span class="o">==</span> <span class="s2">&quot;minmax_scale&quot;</span><span class="p">:</span>
+        <span class="n">distance_scale_param</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;min&quot;</span><span class="p">:</span> <span class="n">distance_scale</span><span class="o">.</span><span class="n">data_min_</span><span class="p">,</span> <span class="s2">&quot;max&quot;</span><span class="p">:</span> <span class="n">distance_scale</span><span class="o">.</span><span class="n">data_max_</span><span class="p">}</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">distance_scale_param</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;mean&quot;</span><span class="p">:</span> <span class="n">distance_scale</span><span class="o">.</span><span class="n">mean_</span><span class="p">,</span> <span class="s2">&quot;var&quot;</span><span class="p">:</span> <span class="n">distance_scale</span><span class="o">.</span><span class="n">var_</span><span class="p">}</span>
+    <span class="n">train_dataset</span><span class="o">.</span><span class="n">distances</span> <span class="o">=</span> <span class="n">distances</span><span class="p">[:</span><span class="n">train_distance_len</span><span class="p">]</span>
+    <span class="n">val_dataset</span><span class="o">.</span><span class="n">distances</span> <span class="o">=</span> <span class="n">distances</span><span class="p">[</span><span class="n">train_distance_len</span><span class="p">:</span><span class="n">train_distance_len</span> <span class="o">+</span> <span class="n">val_distance_len</span><span class="p">]</span>
+    <span class="n">test_dataset</span><span class="o">.</span><span class="n">distances</span> <span class="o">=</span> <span class="n">distances</span><span class="p">[</span><span class="n">train_distance_len</span> <span class="o">+</span> <span class="n">val_distance_len</span><span class="p">:]</span>
+    <span class="n">train_dataset</span><span class="o">.</span><span class="n">distances_scale_param</span> <span class="o">=</span> <span class="n">val_dataset</span><span class="o">.</span><span class="n">distances_scale_param</span> <span class="o">=</span> <span class="n">test_dataset</span><span class="o">.</span><span class="n">distances_scale_param</span> <span class="o">=</span> <span class="n">distance_scale_param</span>
+    <span class="k">if</span> <span class="n">temp_column</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">temporal</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">((</span><span class="n">train_dataset</span><span class="o">.</span><span class="n">temporal</span><span class="p">,</span> <span class="n">val_dataset</span><span class="o">.</span><span class="n">temporal</span><span class="p">,</span> <span class="n">test_dataset</span><span class="o">.</span><span class="n">temporal</span><span class="p">),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="n">temporal</span> <span class="o">=</span> <span class="n">temporal_scale</span><span class="o">.</span><span class="n">fit_transform</span><span class="p">(</span><span class="n">temporal</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">temporal</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]))</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">temporal</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">process_fn</span> <span class="o">==</span> <span class="s2">&quot;minmax_scale&quot;</span><span class="p">:</span>
+            <span class="n">temporal_scale_param</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;min&quot;</span><span class="p">:</span> <span class="n">temporal_scale</span><span class="o">.</span><span class="n">data_min_</span><span class="p">,</span> <span class="s2">&quot;max&quot;</span><span class="p">:</span> <span class="n">temporal_scale</span><span class="o">.</span><span class="n">data_max_</span><span class="p">}</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">temporal_scale_param</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;mean&quot;</span><span class="p">:</span> <span class="n">temporal_scale</span><span class="o">.</span><span class="n">mean_</span><span class="p">,</span> <span class="s2">&quot;var&quot;</span><span class="p">:</span> <span class="n">temporal_scale</span><span class="o">.</span><span class="n">var_</span><span class="p">}</span>
+        <span class="n">train_dataset</span><span class="o">.</span><span class="n">temporal</span> <span class="o">=</span> <span class="n">temporal</span><span class="p">[:</span><span class="n">train_distance_len</span><span class="p">]</span>
+        <span class="n">val_dataset</span><span class="o">.</span><span class="n">temporal</span> <span class="o">=</span> <span class="n">temporal</span><span class="p">[</span><span class="n">train_distance_len</span><span class="p">:</span><span class="n">train_distance_len</span> <span class="o">+</span> <span class="n">val_distance_len</span><span class="p">]</span>
+        <span class="n">test_dataset</span><span class="o">.</span><span class="n">temporal</span> <span class="o">=</span> <span class="n">temporal</span><span class="p">[</span><span class="n">train_distance_len</span> <span class="o">+</span> <span class="n">val_distance_len</span><span class="p">:]</span>
+        <span class="n">train_dataset</span><span class="o">.</span><span class="n">temporal_scale_param</span> <span class="o">=</span> <span class="n">val_dataset</span><span class="o">.</span><span class="n">temporal_scale_param</span> <span class="o">=</span> <span class="n">test_dataset</span><span class="o">.</span><span class="n">temporal_scale_param</span> <span class="o">=</span> <span class="n">temporal_scale_param</span>
+
+    <span class="n">train_dataset</span><span class="o">.</span><span class="n">dataloader</span> <span class="o">=</span> <span class="n">DataLoader</span><span class="p">(</span>
+        <span class="n">train_dataset</span><span class="p">,</span> <span class="n">batch_size</span><span class="o">=</span><span class="n">batch_size</span><span class="p">,</span> <span class="n">shuffle</span><span class="o">=</span><span class="n">shuffle</span><span class="p">)</span>
+    <span class="n">val_dataset</span><span class="o">.</span><span class="n">dataloader</span> <span class="o">=</span> <span class="n">DataLoader</span><span class="p">(</span>
+        <span class="n">val_dataset</span><span class="p">,</span> <span class="n">batch_size</span><span class="o">=</span><span class="n">max_val_size</span><span class="p">,</span> <span class="n">shuffle</span><span class="o">=</span><span class="n">shuffle</span><span class="p">)</span>
+    <span class="n">test_dataset</span><span class="o">.</span><span class="n">dataloader</span> <span class="o">=</span> <span class="n">DataLoader</span><span class="p">(</span>
+        <span class="n">test_dataset</span><span class="p">,</span> <span class="n">batch_size</span><span class="o">=</span><span class="n">max_test_size</span><span class="p">,</span> <span class="n">shuffle</span><span class="o">=</span><span class="n">shuffle</span><span class="p">)</span>
+    <span class="n">train_dataset</span><span class="o">.</span><span class="n">batch_size</span><span class="p">,</span> <span class="n">train_dataset</span><span class="o">.</span><span class="n">shuffle</span> <span class="o">=</span> <span class="n">batch_size</span><span class="p">,</span> <span class="n">shuffle</span>
+    <span class="n">val_dataset</span><span class="o">.</span><span class="n">batch_size</span><span class="p">,</span> <span class="n">val_dataset</span><span class="o">.</span><span class="n">shuffle</span> <span class="o">=</span> <span class="n">max_val_size</span><span class="p">,</span> <span class="n">shuffle</span>
+    <span class="n">test_dataset</span><span class="o">.</span><span class="n">batch_size</span><span class="p">,</span> <span class="n">test_dataset</span><span class="o">.</span><span class="n">shuffle</span> <span class="o">=</span> <span class="n">max_test_size</span><span class="p">,</span> <span class="n">shuffle</span>
+    <span class="k">return</span> <span class="n">train_dataset</span><span class="p">,</span> <span class="n">val_dataset</span><span class="p">,</span> <span class="n">test_dataset</span></div>
+
+
+
+<div class="viewcode-block" id="init_dataset_cv">
+<a class="viewcode-back" href="../../gnnwr/datasets.html#gnnwr.datasets.init_dataset_cv">[docs]</a>
+<span class="k">def</span> <span class="nf">init_dataset_cv</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">test_ratio</span><span class="p">,</span> <span class="n">k_fold</span><span class="p">,</span> <span class="n">x_column</span><span class="p">,</span> <span class="n">y_column</span><span class="p">,</span> <span class="n">spatial_column</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">temp_column</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                    <span class="n">id_column</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                    <span class="n">sample_seed</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span>
+                    <span class="n">process_fn</span><span class="o">=</span><span class="s2">&quot;minmax_scale&quot;</span><span class="p">,</span> <span class="n">batch_size</span><span class="o">=</span><span class="mi">32</span><span class="p">,</span> <span class="n">shuffle</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">use_class</span><span class="o">=</span><span class="n">baseDataset</span><span class="p">,</span>
+                    <span class="n">spatial_fun</span><span class="o">=</span><span class="n">BasicDistance</span><span class="p">,</span> <span class="n">temporal_fun</span><span class="o">=</span><span class="n">Manhattan_distance</span><span class="p">,</span> <span class="n">max_val_size</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span> <span class="n">max_test_size</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span>
+                    <span class="n">is_need_STNN</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">Reference</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">simple_distance</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    initialize dataset for cross validation</span>
+
+
+<span class="sd">    :param data: input data</span>
+<span class="sd">    :param test_ratio: test set ratio</span>
+<span class="sd">    :param k_fold:  k of k-fold</span>
+<span class="sd">    :param x_column: attribute column name</span>
+<span class="sd">    :param y_column: label column name</span>
+<span class="sd">    :param spatial_column: spatial distance column name</span>
+<span class="sd">    :param temp_column: temporal distance column name</span>
+<span class="sd">    :param id_column: id column name</span>
+<span class="sd">    :param sample_seed: random seed</span>
+<span class="sd">    :param process_fn: data process function</span>
+<span class="sd">    :param batch_size: batch size</span>
+<span class="sd">    :param shuffle: shuffle or not</span>
+<span class="sd">    :param use_class: dataset class</span>
+<span class="sd">    :param spatial_fun: spatial distance calculate function</span>
+<span class="sd">    :param temporal_fun: temporal distance calculate function</span>
+<span class="sd">    :param max_val_size: validation set size</span>
+<span class="sd">    :param max_test_size: test set size</span>
+<span class="sd">    :param is_need_STNN: whether need STNN</span>
+<span class="sd">    :param Reference: reference data</span>
+<span class="sd">    :param simple_distance: is simple distance</span>
+<span class="sd">    :return: cv_data_set, test_dataset</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">cv_data_set</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">valid_ratio</span> <span class="o">=</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">test_ratio</span><span class="p">)</span> <span class="o">/</span> <span class="n">k_fold</span>
+    <span class="n">test_dataset</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">k_fold</span><span class="p">):</span>
+        <span class="n">train_dataset</span><span class="p">,</span> <span class="n">val_dataset</span><span class="p">,</span> <span class="n">test_dataset</span> <span class="o">=</span> <span class="n">init_dataset</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">test_ratio</span><span class="p">,</span> <span class="n">valid_ratio</span><span class="p">,</span> <span class="n">x_column</span><span class="p">,</span> <span class="n">y_column</span><span class="p">,</span>
+                                                                <span class="n">spatial_column</span><span class="p">,</span>
+                                                                <span class="n">temp_column</span><span class="p">,</span>
+                                                                <span class="n">id_column</span><span class="p">,</span>
+                                                                <span class="n">sample_seed</span><span class="p">,</span>
+                                                                <span class="n">process_fn</span><span class="p">,</span> <span class="n">batch_size</span><span class="p">,</span> <span class="n">shuffle</span><span class="p">,</span> <span class="n">use_class</span><span class="p">,</span>
+                                                                <span class="n">spatial_fun</span><span class="p">,</span> <span class="n">temporal_fun</span><span class="p">,</span> <span class="n">max_val_size</span><span class="p">,</span> <span class="n">max_test_size</span><span class="p">,</span>
+                                                                <span class="n">i</span><span class="p">,</span> <span class="n">is_need_STNN</span><span class="p">,</span> <span class="n">Reference</span><span class="p">,</span> <span class="n">simple_distance</span><span class="p">)</span>
+        <span class="n">cv_data_set</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">train_dataset</span><span class="p">,</span> <span class="n">val_dataset</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">cv_data_set</span><span class="p">,</span> <span class="n">test_dataset</span></div>
+
+
+
+<span class="c1"># TODO Not finished</span>
+<span class="c1"># def init_dataset_with_dist_frame(data, train_ratio, valid_ratio, x_column, y_column, id_column, dist_frame=None,</span>
+<span class="c1">#                                  process_fn=&quot;minmax_scale&quot;, batch_size=32, shuffle=True, use_class=baseDataset):</span>
+<span class="c1">#     train_data, val_data, test_data = np.split(data.sample(frac=1),</span>
+<span class="c1">#                                                [int(train_ratio * len(data)),</span>
+<span class="c1">#                                                 int((train_ratio + valid_ratio) * len(data))])</span>
+<span class="c1">#</span>
+<span class="c1">#     # 初始化train_dataset,val_dataset,test_dataset</span>
+<span class="c1">#     train_dataset = use_class(train_data, x_column, y_column, process_fn)</span>
+<span class="c1">#     val_dataset = use_class(val_data, x_column, y_column, process_fn)</span>
+<span class="c1">#     test_dataset = use_class(test_data, x_column, y_column, process_fn)</span>
+<span class="c1">#</span>
+<span class="c1">#     dist_frame.columns = [&#39;id1&#39;, &#39;id2&#39;, &#39;dis&#39;]</span>
+<span class="c1">#     dist_frame = dist_frame.set_index([&#39;id1&#39;, &#39;id2&#39;])[</span>
+<span class="c1">#         &#39;dis&#39;].unstack().reset_index().drop(&#39;id1&#39;, axis=1)</span>
+<span class="c1">#</span>
+<span class="c1">#     train_ids = train_data[id_column[0]].tolist()</span>
+<span class="c1">#     val_ids = val_data[id_column[0]].tolist()</span>
+<span class="c1">#     test_ids = test_data[id_column[0]].tolist()</span>
+<span class="c1">#</span>
+<span class="c1">#     train_dataset.distances = np.float32(</span>
+<span class="c1">#         dist_frame[dist_frame.index.isin(train_ids)][train_ids].values)</span>
+<span class="c1">#     val_dataset.distances = np.float32(</span>
+<span class="c1">#         dist_frame[dist_frame.index.isin(val_ids)][train_ids].values)</span>
+<span class="c1">#     test_dataset.distances = np.float32(</span>
+<span class="c1">#         dist_frame[dist_frame.index.isin(test_ids)][train_ids].values)</span>
+<span class="c1">#</span>
+<span class="c1">#     train_dataset.dataloader = DataLoader(</span>
+<span class="c1">#         train_dataset, batch_size=batch_size, shuffle=shuffle)</span>
+<span class="c1">#     val_dataset.dataloader = DataLoader(</span>
+<span class="c1">#         val_dataset, batch_size=batch_size, shuffle=shuffle)</span>
+<span class="c1">#     test_dataset.dataloader = DataLoader(</span>
+<span class="c1">#         test_dataset, batch_size=batch_size, shuffle=shuffle)</span>
+<span class="c1">#</span>
+<span class="c1">#     return train_dataset, val_dataset, test_dataset</span>
+
+
+<div class="viewcode-block" id="init_predict_dataset">
+<a class="viewcode-back" href="../../gnnwr/datasets.html#gnnwr.datasets.init_predict_dataset">[docs]</a>
+<span class="k">def</span> <span class="nf">init_predict_dataset</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">train_dataset</span><span class="p">,</span> <span class="n">x_column</span><span class="p">,</span> <span class="n">spatial_column</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">temp_column</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                         <span class="n">process_fn</span><span class="o">=</span><span class="s2">&quot;minmax_scale&quot;</span><span class="p">,</span> <span class="n">scale_sync</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">use_class</span><span class="o">=</span><span class="n">predictDataset</span><span class="p">,</span>
+                         <span class="n">spatial_fun</span><span class="o">=</span><span class="n">BasicDistance</span><span class="p">,</span> <span class="n">temporal_fun</span><span class="o">=</span><span class="n">Manhattan_distance</span><span class="p">,</span> <span class="n">max_size</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span> <span class="n">is_need_STNN</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    initialize predict dataset</span>
+
+<span class="sd">    :param data: input data</span>
+<span class="sd">    :param train_dataset: train data</span>
+<span class="sd">    :param x_column: attribute column name</span>
+<span class="sd">    :param spatial_column: spatial distance column name</span>
+<span class="sd">    :param temp_column: temporal distance column name</span>
+<span class="sd">    :param process_fn: data process function</span>
+<span class="sd">    :param scale_sync: scale sync or not</span>
+<span class="sd">    :param max_size: max size of predict dataset</span>
+<span class="sd">    :param use_class: dataset class</span>
+<span class="sd">    :param spatial_fun: spatial distance calculate function</span>
+<span class="sd">    :param temporal_fun: temporal distance calculate function</span>
+<span class="sd">    :param is_need_STNN: is need STNN or not</span>
+<span class="sd">    :return: predict_dataset</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">spatial_fun</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="c1"># if dist_fun is None, raise error</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="s2">&quot;dist_fun must be a function that can process the data&quot;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">spatial_column</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="c1"># if dist_column is None, raise error</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="s2">&quot;dist_column must be a column name in data&quot;</span><span class="p">)</span>
+
+    <span class="c1"># initialize the predict_dataset</span>
+    <span class="k">if</span> <span class="n">train_dataset</span><span class="o">.</span><span class="n">scale_fn</span> <span class="o">==</span> <span class="s2">&quot;minmax_scale&quot;</span><span class="p">:</span>
+        <span class="n">process_params</span> <span class="o">=</span> <span class="p">[[</span><span class="n">train_dataset</span><span class="o">.</span><span class="n">x_scale_info</span><span class="p">[</span><span class="s1">&#39;min&#39;</span><span class="p">],</span> <span class="n">train_dataset</span><span class="o">.</span><span class="n">x_scale_info</span><span class="p">[</span><span class="s1">&#39;max&#39;</span><span class="p">]]]</span>
+    <span class="k">elif</span> <span class="n">train_dataset</span><span class="o">.</span><span class="n">scale_fn</span> <span class="o">==</span> <span class="s2">&quot;standard_scale&quot;</span><span class="p">:</span>
+        <span class="n">process_params</span> <span class="o">=</span> <span class="p">[[</span><span class="n">train_dataset</span><span class="o">.</span><span class="n">x_scale_info</span><span class="p">[</span><span class="s1">&#39;mean&#39;</span><span class="p">],</span> <span class="n">train_dataset</span><span class="o">.</span><span class="n">x_scale_info</span><span class="p">[</span><span class="s1">&#39;std&#39;</span><span class="p">]]]</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;scale_fn must be minmax_scale or standard_scale&quot;</span><span class="p">)</span>
+    <span class="c1"># print(&quot;ProcessParams:&quot;,process_params)</span>
+    <span class="k">if</span> <span class="n">scale_sync</span><span class="p">:</span>
+        <span class="n">predict_dataset</span> <span class="o">=</span> <span class="n">use_class</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">data</span><span class="p">,</span> <span class="n">x_column</span><span class="o">=</span><span class="n">x_column</span><span class="p">,</span> <span class="n">process_fn</span><span class="o">=</span><span class="n">process_fn</span><span class="p">,</span> <span class="n">scale_info</span><span class="o">=</span><span class="n">process_params</span><span class="p">,</span>
+                                    <span class="n">is_need_STNN</span><span class="o">=</span><span class="n">is_need_STNN</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">predict_dataset</span> <span class="o">=</span> <span class="n">use_class</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">data</span><span class="p">,</span> <span class="n">x_column</span><span class="o">=</span><span class="n">x_column</span><span class="p">,</span> <span class="n">process_fn</span><span class="o">=</span><span class="n">process_fn</span><span class="p">,</span> <span class="n">is_need_STNN</span><span class="o">=</span><span class="n">is_need_STNN</span><span class="p">)</span>
+
+    <span class="c1"># train_data = train_dataset.dataframe</span>
+    <span class="n">reference_data</span> <span class="o">=</span> <span class="n">train_dataset</span><span class="o">.</span><span class="n">reference</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">is_need_STNN</span><span class="p">:</span>
+        <span class="c1"># if not use STNN, calculate spatial/temporal distance matrix and concatenate them</span>
+        <span class="k">if</span> <span class="n">train_dataset</span><span class="o">.</span><span class="n">simple_distance</span><span class="p">:</span>
+            <span class="n">predict_dataset</span><span class="o">.</span><span class="n">distances</span> <span class="o">=</span> <span class="n">spatial_fun</span><span class="p">(</span>
+                <span class="n">data</span><span class="p">[</span><span class="n">spatial_column</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">,</span> <span class="n">reference_data</span><span class="p">[</span><span class="n">spatial_column</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">temp_column</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="c1"># if temp_column is not None, calculate temporal distance matrix</span>
+                <span class="n">predict_dataset</span><span class="o">.</span><span class="n">temporal</span> <span class="o">=</span> <span class="n">temporal_fun</span><span class="p">(</span>
+                    <span class="n">data</span><span class="p">[</span><span class="n">temp_column</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">,</span> <span class="n">reference_data</span><span class="p">[</span><span class="n">temp_column</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">)</span>
+
+                <span class="n">predict_dataset</span><span class="o">.</span><span class="n">distances</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(</span>
+                    <span class="p">(</span><span class="n">predict_dataset</span><span class="o">.</span><span class="n">distances</span><span class="p">[:,</span> <span class="p">:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">],</span> <span class="n">predict_dataset</span><span class="o">.</span><span class="n">temporal</span><span class="p">[:,</span> <span class="p">:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">]),</span>
+                    <span class="n">axis</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>  <span class="c1"># concatenate spatial and temporal distance matrix</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">predict_dataset</span><span class="o">.</span><span class="n">distances</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="n">spatial_column</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">[:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">,</span> <span class="p">:],</span>
+                                                  <span class="nb">len</span><span class="p">(</span><span class="n">reference_data</span><span class="p">),</span>
+                                                  <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+            <span class="n">predict_temp_distance</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="n">reference_data</span><span class="p">[</span><span class="n">spatial_column</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">[:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">,</span> <span class="p">:],</span>
+                                              <span class="n">predict_dataset</span><span class="o">.</span><span class="n">datasize</span><span class="p">,</span>
+                                              <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+            <span class="n">predict_dataset</span><span class="o">.</span><span class="n">distances</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(</span>
+                <span class="p">(</span><span class="n">predict_dataset</span><span class="o">.</span><span class="n">distances</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="n">predict_temp_distance</span><span class="p">,</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">))),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">temp_column</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">predict_dataset</span><span class="o">.</span><span class="n">temporal</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="n">temp_column</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">[:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">,</span> <span class="p">:],</span>
+                                                     <span class="nb">len</span><span class="p">(</span><span class="n">reference_data</span><span class="p">),</span>
+                                                     <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+                <span class="n">predict_temp_temporal</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="n">reference_data</span><span class="p">[</span><span class="n">temp_column</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">[:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">,</span> <span class="p">:],</span>
+                                                  <span class="n">predict_dataset</span><span class="o">.</span><span class="n">datasize</span><span class="p">,</span>
+                                                  <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+                <span class="n">predict_dataset</span><span class="o">.</span><span class="n">temporal</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(</span>
+                    <span class="p">(</span><span class="n">predict_dataset</span><span class="o">.</span><span class="n">temporal</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="n">predict_temp_temporal</span><span class="p">,</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">))),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+            <span class="n">predict_dataset</span><span class="o">.</span><span class="n">distances</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(</span>
+                <span class="p">(</span><span class="n">predict_dataset</span><span class="o">.</span><span class="n">distances</span><span class="p">,</span> <span class="n">predict_dataset</span><span class="o">.</span><span class="n">temporal</span><span class="p">),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+
+    <span class="k">else</span><span class="p">:</span>
+        <span class="c1"># if use STNN, calculate spatial/temporal point matrix</span>
+        <span class="c1"># spatial distances matrix</span>
+        <span class="n">predict_dataset</span><span class="o">.</span><span class="n">distances</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="n">spatial_column</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">[:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">,</span> <span class="p">:],</span> <span class="nb">len</span><span class="p">(</span><span class="n">reference_data</span><span class="p">),</span>
+                                              <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">predict_temp_distance</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="n">reference_data</span><span class="p">[</span><span class="n">spatial_column</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">[:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">,</span> <span class="p">:],</span>
+                                          <span class="n">predict_dataset</span><span class="o">.</span><span class="n">datasize</span><span class="p">,</span>
+                                          <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">predict_dataset</span><span class="o">.</span><span class="n">distances</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(</span>
+            <span class="p">(</span><span class="n">predict_dataset</span><span class="o">.</span><span class="n">distances</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="n">predict_temp_distance</span><span class="p">,</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">))),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+
+        <span class="c1"># temporal distances matrix</span>
+        <span class="k">if</span> <span class="n">temp_column</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">predict_dataset</span><span class="o">.</span><span class="n">temporal</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="n">temp_column</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">[:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">,</span> <span class="p">:],</span> <span class="nb">len</span><span class="p">(</span><span class="n">reference_data</span><span class="p">),</span>
+                                                 <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+            <span class="n">predict_temp_temporal</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="n">reference_data</span><span class="p">[</span><span class="n">temp_column</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">[:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">,</span> <span class="p">:],</span>
+                                              <span class="n">predict_dataset</span><span class="o">.</span><span class="n">datasize</span><span class="p">,</span>
+                                              <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+            <span class="n">predict_dataset</span><span class="o">.</span><span class="n">temporal</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(</span>
+                <span class="p">(</span><span class="n">predict_dataset</span><span class="o">.</span><span class="n">temporal</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="n">predict_temp_temporal</span><span class="p">,</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">))),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">process_fn</span> <span class="o">==</span> <span class="s2">&quot;minmax_scale&quot;</span><span class="p">:</span>
+        <span class="n">predict_dataset</span><span class="o">.</span><span class="n">distances</span> <span class="o">=</span> <span class="n">predict_dataset</span><span class="o">.</span><span class="n">minmax_scaler</span><span class="p">(</span><span class="n">predict_dataset</span><span class="o">.</span><span class="n">distances</span><span class="p">,</span>
+                                                                  <span class="n">train_dataset</span><span class="o">.</span><span class="n">distances_scale_param</span><span class="p">[</span><span class="s1">&#39;min&#39;</span><span class="p">],</span>
+                                                                  <span class="n">train_dataset</span><span class="o">.</span><span class="n">distances_scale_param</span><span class="p">[</span><span class="s1">&#39;max&#39;</span><span class="p">])</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">predict_dataset</span><span class="o">.</span><span class="n">distances</span> <span class="o">=</span> <span class="n">predict_dataset</span><span class="o">.</span><span class="n">standard_scaler</span><span class="p">(</span><span class="n">predict_dataset</span><span class="o">.</span><span class="n">distances</span><span class="p">,</span>
+                                                                    <span class="n">train_dataset</span><span class="o">.</span><span class="n">distances_scale_param</span><span class="p">[</span><span class="s1">&#39;mean&#39;</span><span class="p">],</span>
+                                                                    <span class="n">train_dataset</span><span class="o">.</span><span class="n">distances_scale_param</span><span class="p">[</span><span class="s1">&#39;var&#39;</span><span class="p">])</span>
+    <span class="c1"># initialize dataloader for train/val/test dataset</span>
+    <span class="k">if</span> <span class="n">max_size</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span> <span class="n">max_size</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">predict_dataset</span><span class="p">)</span>
+    <span class="n">predict_dataset</span><span class="o">.</span><span class="n">dataloader</span> <span class="o">=</span> <span class="n">DataLoader</span><span class="p">(</span>
+        <span class="n">predict_dataset</span><span class="p">,</span> <span class="n">batch_size</span><span class="o">=</span><span class="n">max_size</span><span class="p">,</span> <span class="n">shuffle</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">predict_dataset</span></div>
+
+
+
+<div class="viewcode-block" id="load_dataset">
+<a class="viewcode-back" href="../../gnnwr/datasets.html#gnnwr.datasets.load_dataset">[docs]</a>
+<span class="k">def</span> <span class="nf">load_dataset</span><span class="p">(</span><span class="n">directory</span><span class="p">,</span> <span class="n">use_class</span><span class="o">=</span><span class="n">baseDataset</span><span class="p">):</span>
+    <span class="n">dataset</span> <span class="o">=</span> <span class="n">use_class</span><span class="p">()</span>
+    <span class="n">dataset</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">directory</span><span class="p">)</span>
+    <span class="n">dataset</span><span class="o">.</span><span class="n">dataloader</span> <span class="o">=</span> <span class="n">DataLoader</span><span class="p">(</span><span class="n">dataset</span><span class="p">,</span> <span class="n">batch_size</span><span class="o">=</span><span class="n">dataset</span><span class="o">.</span><span class="n">batch_size</span><span class="p">,</span> <span class="n">shuffle</span><span class="o">=</span><span class="n">dataset</span><span class="o">.</span><span class="n">shuffle</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">dataset</span></div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2023, gnnwr.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>gnnwr.models module &mdash; GNNWR 0.1.4 documentation</title>
+      <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="../_static/documentation_options.js?v=fd825880"></script>
+        <script src="../_static/doctools.js?v=888ff710"></script>
+        <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="gnnwr.networks module" href="networks.html" />
+    <link rel="prev" title="gnnwr.datasets module" href="datasets.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            GNNWR
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="datasets.html">gnnwr.datasets module</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">gnnwr.models module</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#gnnwr.models.GNNWR"><code class="docutils literal notranslate"><span class="pre">GNNWR</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#gnnwr.models.GNNWR.add_graph"><code class="docutils literal notranslate"><span class="pre">GNNWR.add_graph()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#gnnwr.models.GNNWR.getLoss"><code class="docutils literal notranslate"><span class="pre">GNNWR.getLoss()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#gnnwr.models.GNNWR.getWeights"><code class="docutils literal notranslate"><span class="pre">GNNWR.getWeights()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#gnnwr.models.GNNWR.gpumodel_to_cpu"><code class="docutils literal notranslate"><span class="pre">GNNWR.gpumodel_to_cpu()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#gnnwr.models.GNNWR.init_optimizer"><code class="docutils literal notranslate"><span class="pre">GNNWR.init_optimizer()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#gnnwr.models.GNNWR.load_model"><code class="docutils literal notranslate"><span class="pre">GNNWR.load_model()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#gnnwr.models.GNNWR.predict"><code class="docutils literal notranslate"><span class="pre">GNNWR.predict()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#gnnwr.models.GNNWR.predict_weight"><code class="docutils literal notranslate"><span class="pre">GNNWR.predict_weight()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#gnnwr.models.GNNWR.reg_result"><code class="docutils literal notranslate"><span class="pre">GNNWR.reg_result()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#gnnwr.models.GNNWR.result"><code class="docutils literal notranslate"><span class="pre">GNNWR.result()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#gnnwr.models.GNNWR.run"><code class="docutils literal notranslate"><span class="pre">GNNWR.run()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#gnnwr.models.GTNNWR"><code class="docutils literal notranslate"><span class="pre">GTNNWR</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="networks.html">gnnwr.networks module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="utils.html">gnnwr.utils module</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">GNNWR</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">gnnwr.models module</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/gnnwr/models.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="module-gnnwr.models">
+<span id="gnnwr-models-module"></span><h1>gnnwr.models module<a class="headerlink" href="#module-gnnwr.models" title="Link to this heading"></a></h1>
+<dl class="py class">
+<dt class="sig sig-object py" id="gnnwr.models.GNNWR">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">gnnwr.models.</span></span><span class="sig-name descname"><span class="pre">GNNWR</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">train_dataset</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">valid_dataset</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">test_dataset</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dense_layers</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">start_lr</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">optimizer</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'Adagrad'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">drop_out</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">batch_norm</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">activate_func</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">PReLU(num_parameters=1)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model_name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'GNNWR_20231128-111456'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model_save_path</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'../gnnwr_models'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">write_path</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'../gnnwr_runs/20231128-111456'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_gpu</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_ols</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">log_path</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'../gnnwr_logs/'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">log_file_name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'gnnwr20231128-111456.log'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">log_level</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">20</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">optimizer_params</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/gnnwr/models.html#GNNWR"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gnnwr.models.GNNWR" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>GNNWR(Geographically neural network weighted regression) is a model to address spatial non-stationarity in various domains with complex geographical processes,
+which comes from the paper <a class="reference external" href="https://doi.org/10.1080/13658816.2019.1707834">Geographically neural network weighted regression for the accurate estimation of spatial non-stationarity</a>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>train_dataset</strong> (<a class="reference internal" href="datasets.html#gnnwr.datasets.baseDataset" title="gnnwr.datasets.baseDataset"><em>baseDataset</em></a>) – the dataset of training</p></li>
+<li><p><strong>valid_dataset</strong> (<a class="reference internal" href="datasets.html#gnnwr.datasets.baseDataset" title="gnnwr.datasets.baseDataset"><em>baseDataset</em></a>) – the dataset of validation</p></li>
+<li><p><strong>test_dataset</strong> (<a class="reference internal" href="datasets.html#gnnwr.datasets.baseDataset" title="gnnwr.datasets.baseDataset"><em>baseDataset</em></a>) – the dataset of testing</p></li>
+<li><p><strong>dense_layers</strong> (<em>list</em>) – <p>the dense layers of the model (default: <code class="docutils literal notranslate"><span class="pre">None</span></code>)</p>
+<p>Default structure is a geometric sequence of power of 2, the minimum is 2, and the maximum is the power of 2 closest to the number of neurons in the input layer.</p>
+<p>i.e. <code class="docutils literal notranslate"><span class="pre">[2,4,8,16,32,64,128,256]</span></code></p>
+</p></li>
+<li><p><strong>start_lr</strong> (<em>float</em>) – the start learning rate of the model (default: <code class="docutils literal notranslate"><span class="pre">0.1</span></code>)</p></li>
+<li><p><strong>optimizer</strong> (<em>str</em><em>, </em><em>optional</em>) – the optimizer of the model (default: <code class="docutils literal notranslate"><span class="pre">&quot;Adagrad&quot;</span></code>)
+choose from “SGD”,”Adam”,”RMSprop”,”Adagrad”,”Adadelta”</p></li>
+<li><p><strong>drop_out</strong> (<em>float</em>) – the drop out rate of the model (default: <code class="docutils literal notranslate"><span class="pre">0.2</span></code>)</p></li>
+<li><p><strong>batch_norm</strong> (<em>bool</em><em>, </em><em>optional</em>) – whether use batch normalization (default: <code class="docutils literal notranslate"><span class="pre">True</span></code>)</p></li>
+<li><p><strong>activate_func</strong> (<em>torch.nn</em>) – the activate function of the model (default: <code class="docutils literal notranslate"><span class="pre">nn.PReLU(init=0.4)</span></code>)</p></li>
+<li><p><strong>model_name</strong> (<em>str</em>) – the name of the model (default: <code class="docutils literal notranslate"><span class="pre">&quot;GNNWR_&quot;</span> <span class="pre">+</span> <span class="pre">datetime.datetime.today().strftime(&quot;%Y%m%d-%H%M%S&quot;)</span></code>)</p></li>
+<li><p><strong>model_save_path</strong> (<em>str</em>) – the path of the model (default: <code class="docutils literal notranslate"><span class="pre">&quot;../gnnwr_models&quot;</span></code>)</p></li>
+<li><p><strong>write_path</strong> (<em>str</em>) – the path of the log (default: <code class="docutils literal notranslate"><span class="pre">&quot;../gnnwr_runs/&quot;</span> <span class="pre">+</span> <span class="pre">datetime.datetime.now().strftime(&quot;%Y%m%d-%H%M%S&quot;)</span></code>)</p></li>
+<li><p><strong>use_gpu</strong> (<em>bool</em>) – whether use gpu or not (default: <code class="docutils literal notranslate"><span class="pre">True</span></code>)</p></li>
+<li><p><strong>use_ols</strong> (<em>bool</em>) – whether use ols or not (default: <code class="docutils literal notranslate"><span class="pre">True</span></code>)</p></li>
+<li><p><strong>log_path</strong> (<em>str</em>) – the path of the log (default: <code class="docutils literal notranslate"><span class="pre">&quot;../gnnwr_logs/&quot;</span></code>)</p></li>
+<li><p><strong>log_file_name</strong> (<em>str</em>) – the name of the log (default: <code class="docutils literal notranslate"><span class="pre">&quot;gnnwr&quot;</span> <span class="pre">+</span> <span class="pre">datetime.datetime.now().strftime(&quot;%Y%m%d-%H%M%S&quot;)</span> <span class="pre">+</span> <span class="pre">&quot;.log&quot;</span></code>)</p></li>
+<li><p><strong>log_level</strong> (<em>int</em>) – the level of the log (default: <code class="docutils literal notranslate"><span class="pre">logging.INFO</span></code>)</p></li>
+<li><p><strong>optimizer_params</strong> (<em>dict</em><em>, </em><em>optional</em>) – <p>the params of the optimizer and the scheduler (default: <code class="docutils literal notranslate"><span class="pre">None</span></code>)</p>
+<p>if optimizer is SGD, the params are:</p>
+<blockquote>
+<div><div class="line-block">
+<div class="line">maxlr: float, the max learning rate (default: <code class="docutils literal notranslate"><span class="pre">0.1</span></code>)</div>
+</div>
+<div class="line-block">
+<div class="line">minlr: float, the min learning rate (default: <code class="docutils literal notranslate"><span class="pre">0.01</span></code>)</div>
+</div>
+<div class="line-block">
+<div class="line">upepoch: int, the epoch of learning rate up (default: <code class="docutils literal notranslate"><span class="pre">10000</span></code>)</div>
+</div>
+<div class="line-block">
+<div class="line">decayepoch: int, the epoch of learning rate decay (default: <code class="docutils literal notranslate"><span class="pre">20000</span></code>)</div>
+</div>
+<div class="line-block">
+<div class="line">decayrate: float, the rate of learning rate decay (default: <code class="docutils literal notranslate"><span class="pre">0.1</span></code>)</div>
+</div>
+<div class="line-block">
+<div class="line">stop_change_epoch: int, the epoch of learning rate stop change (default: <code class="docutils literal notranslate"><span class="pre">30000</span></code>)</div>
+</div>
+<div class="line-block">
+<div class="line">stop_lr: float, the learning rate when stop change (default: <code class="docutils literal notranslate"><span class="pre">0.001</span></code>)</div>
+</div>
+</div></blockquote>
+<p>if optimizer is Other, the params are:</p>
+<blockquote>
+<div><div class="line-block">
+<div class="line">scheduler: str, the name of the scheduler (default: <code class="docutils literal notranslate"><span class="pre">&quot;CosineAnnealingWarmRestarts&quot;</span></code>) in {<code class="docutils literal notranslate"><span class="pre">&quot;MultiStepLR&quot;,&quot;CosineAnnealingLR&quot;,&quot;CosineAnnealingWarmRestarts&quot;</span></code>}</div>
+</div>
+<div class="line-block">
+<div class="line">scheduler_milestones: list, the milestones of the scheduler MultiStepLR (default: <code class="docutils literal notranslate"><span class="pre">[500,1000,2000,4000]</span></code>)</div>
+</div>
+<div class="line-block">
+<div class="line">scheduler_gamma: float, the gamma of the scheduler MultiStepLR (default: <code class="docutils literal notranslate"><span class="pre">0.5</span></code>)</div>
+</div>
+<div class="line-block">
+<div class="line">scheduler_T_max: int, the T_max of the scheduler CosineAnnealingLR (default: <code class="docutils literal notranslate"><span class="pre">1000</span></code>)</div>
+</div>
+<div class="line-block">
+<div class="line">scheduler_eta_min: float, the eta_min of the scheduler CosineAnnealingLR and CosineAnnealingWarmRestarts (default: <code class="docutils literal notranslate"><span class="pre">0.01</span></code>)</div>
+</div>
+<div class="line-block">
+<div class="line">scheduler_T_0: int, the T_0 of the scheduler CosineAnnealingWarmRestarts (default: <code class="docutils literal notranslate"><span class="pre">100</span></code>)</div>
+</div>
+<div class="line-block">
+<div class="line">scheduler_T_mult: int, the T_mult of the scheduler CosineAnnealingWarmRestarts (default: <code class="docutils literal notranslate"><span class="pre">3</span></code>)</div>
+</div>
+</div></blockquote>
+</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="gnnwr.models.GNNWR.add_graph">
+<span class="sig-name descname"><span class="pre">add_graph</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/gnnwr/models.html#GNNWR.add_graph"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gnnwr.models.GNNWR.add_graph" title="Link to this definition"></a></dt>
+<dd><p>add the graph of the model to tensorboard</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="gnnwr.models.GNNWR.getLoss">
+<span class="sig-name descname"><span class="pre">getLoss</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/gnnwr/models.html#GNNWR.getLoss"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gnnwr.models.GNNWR.getLoss" title="Link to this definition"></a></dt>
+<dd><p>get network’s loss</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>the list of the loss in training process and validation process</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>list</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="gnnwr.models.GNNWR.getWeights">
+<span class="sig-name descname"><span class="pre">getWeights</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/gnnwr/models.html#GNNWR.getWeights"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gnnwr.models.GNNWR.getWeights" title="Link to this definition"></a></dt>
+<dd><p>get weight of each argument</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>the Pandas dataframe of the weight of each argument in train_dataset</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>dataframe</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="gnnwr.models.GNNWR.gpumodel_to_cpu">
+<span class="sig-name descname"><span class="pre">gpumodel_to_cpu</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">save_path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_model</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/gnnwr/models.html#GNNWR.gpumodel_to_cpu"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gnnwr.models.GNNWR.gpumodel_to_cpu" title="Link to this definition"></a></dt>
+<dd><p>convert gpu model to cpu model</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>path</strong> (<em>str</em>) – the path of the model</p></li>
+<li><p><strong>save_path</strong> (<em>str</em>) – the path of the new model</p></li>
+<li><p><strong>use_model</strong> (<em>bool</em>) – whether use dict to load the model (default: <code class="docutils literal notranslate"><span class="pre">True</span></code>)</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="gnnwr.models.GNNWR.init_optimizer">
+<span class="sig-name descname"><span class="pre">init_optimizer</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">optimizer</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">optimizer_params</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/gnnwr/models.html#GNNWR.init_optimizer"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gnnwr.models.GNNWR.init_optimizer" title="Link to this definition"></a></dt>
+<dd><p>initialize the optimizer</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>optimizer</strong> (<em>str</em>) – the optimizer of the model (default: <code class="docutils literal notranslate"><span class="pre">&quot;Adagrad&quot;</span></code>)
+choose from “SGD”,”Adam”,”RMSprop”,”Adagrad”,”Adadelta”</p></li>
+<li><p><strong>optimizer_params</strong> (<em>dict</em><em>, </em><em>optional</em>) – <p>the params of the optimizer and the scheduler (default: <code class="docutils literal notranslate"><span class="pre">None</span></code>)</p>
+<p>if optimizer is SGD, the params are:</p>
+<blockquote>
+<div><div class="line-block">
+<div class="line">maxlr: float, the max learning rate (default: <code class="docutils literal notranslate"><span class="pre">0.1</span></code>)</div>
+</div>
+<div class="line-block">
+<div class="line">minlr: float, the min learning rate (default: <code class="docutils literal notranslate"><span class="pre">0.01</span></code>)</div>
+</div>
+<div class="line-block">
+<div class="line">upepoch: int, the epoch of learning rate up (default: <code class="docutils literal notranslate"><span class="pre">10000</span></code>)</div>
+</div>
+<div class="line-block">
+<div class="line">decayepoch: int, the epoch of learning rate decay (default: <code class="docutils literal notranslate"><span class="pre">20000</span></code>)</div>
+</div>
+<div class="line-block">
+<div class="line">decayrate: float, the rate of learning rate decay (default: <code class="docutils literal notranslate"><span class="pre">0.1</span></code>)</div>
+</div>
+<div class="line-block">
+<div class="line">stop_change_epoch: int, the epoch of learning rate stop change (default: <code class="docutils literal notranslate"><span class="pre">30000</span></code>)</div>
+</div>
+<div class="line-block">
+<div class="line">stop_lr: float, the learning rate when stop change (default: <code class="docutils literal notranslate"><span class="pre">0.001</span></code>)</div>
+</div>
+</div></blockquote>
+<p>if optimizer is Other, the params are:</p>
+<blockquote>
+<div><div class="line-block">
+<div class="line">scheduler: str, the name of the scheduler (default: <code class="docutils literal notranslate"><span class="pre">&quot;CosineAnnealingWarmRestarts&quot;</span></code>) in {<code class="docutils literal notranslate"><span class="pre">&quot;MultiStepLR&quot;,&quot;CosineAnnealingLR&quot;,&quot;CosineAnnealingWarmRestarts&quot;</span></code>}</div>
+</div>
+<div class="line-block">
+<div class="line">scheduler_milestones: list, the milestones of the scheduler MultiStepLR (default: <code class="docutils literal notranslate"><span class="pre">[500,1000,2000,4000]</span></code>)</div>
+</div>
+<div class="line-block">
+<div class="line">scheduler_gamma: float, the gamma of the scheduler MultiStepLR (default: <code class="docutils literal notranslate"><span class="pre">0.5</span></code>)</div>
+</div>
+<div class="line-block">
+<div class="line">scheduler_T_max: int, the T_max of the scheduler CosineAnnealingLR (default: <code class="docutils literal notranslate"><span class="pre">1000</span></code>)</div>
+</div>
+<div class="line-block">
+<div class="line">scheduler_eta_min: float, the eta_min of the scheduler CosineAnnealingLR and CosineAnnealingWarmRestarts (default: <code class="docutils literal notranslate"><span class="pre">0.01</span></code>)</div>
+</div>
+<div class="line-block">
+<div class="line">scheduler_T_0: int, the T_0 of the scheduler CosineAnnealingWarmRestarts (default: <code class="docutils literal notranslate"><span class="pre">100</span></code>)</div>
+</div>
+<div class="line-block">
+<div class="line">scheduler_T_mult: int, the T_mult of the scheduler CosineAnnealingWarmRestarts (default: <code class="docutils literal notranslate"><span class="pre">3</span></code>)</div>
+</div>
+</div></blockquote>
+</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="gnnwr.models.GNNWR.load_model">
+<span class="sig-name descname"><span class="pre">load_model</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_dict</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">map_location</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/gnnwr/models.html#GNNWR.load_model"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gnnwr.models.GNNWR.load_model" title="Link to this definition"></a></dt>
+<dd><p>load the model</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>path</strong> (<em>str</em>) – the path of the model</p></li>
+<li><p><strong>use_dict</strong> (<em>bool</em>) – whether use dict to load the model (default: <code class="docutils literal notranslate"><span class="pre">False</span></code>)</p></li>
+<li><p><strong>map_location</strong> (<em>str</em>) – the location of the model (default: <code class="docutils literal notranslate"><span class="pre">None</span></code>)
+the location can be <code class="docutils literal notranslate"><span class="pre">&quot;cpu&quot;</span></code> or <code class="docutils literal notranslate"><span class="pre">&quot;cuda&quot;</span></code></p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="gnnwr.models.GNNWR.predict">
+<span class="sig-name descname"><span class="pre">predict</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dataset</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/gnnwr/models.html#GNNWR.predict"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gnnwr.models.GNNWR.predict" title="Link to this definition"></a></dt>
+<dd><p>predict the result of the dataset</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>dataset</strong> (<a class="reference internal" href="datasets.html#gnnwr.datasets.baseDataset" title="gnnwr.datasets.baseDataset"><em>baseDataset</em></a><em>,</em><a class="reference internal" href="datasets.html#gnnwr.datasets.predictDataset" title="gnnwr.datasets.predictDataset"><em>predictDataset</em></a>) – the dataset to be predicted</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>the Pandas dataframe of the dataset with the predicted result</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>dataframe</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="gnnwr.models.GNNWR.predict_weight">
+<span class="sig-name descname"><span class="pre">predict_weight</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dataset</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/gnnwr/models.html#GNNWR.predict_weight"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gnnwr.models.GNNWR.predict_weight" title="Link to this definition"></a></dt>
+<dd><p>predict the spatial weight of the dataset</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>dataset</strong> (<a class="reference internal" href="datasets.html#gnnwr.datasets.baseDataset" title="gnnwr.datasets.baseDataset"><em>baseDataset</em></a><em>,</em><a class="reference internal" href="datasets.html#gnnwr.datasets.predictDataset" title="gnnwr.datasets.predictDataset"><em>predictDataset</em></a>) – the dataset to be predicted</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>the Pandas dataframe of the dataset with the predicted spatial weight</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>dataframe</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="gnnwr.models.GNNWR.reg_result">
+<span class="sig-name descname"><span class="pre">reg_result</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">filename</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model_path</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_dict</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">only_return</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">map_location</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/gnnwr/models.html#GNNWR.reg_result"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gnnwr.models.GNNWR.reg_result" title="Link to this definition"></a></dt>
+<dd><p>save the regression result of the model, including the weight of each argument, the bias, the predicted result</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>filename</strong> (<em>str</em>) – the path of the result file (default: <code class="docutils literal notranslate"><span class="pre">None</span></code>)
+| if <code class="docutils literal notranslate"><span class="pre">filename</span></code> is <code class="docutils literal notranslate"><span class="pre">None</span></code>, the result will not be saved as file</p></li>
+<li><p><strong>model_path</strong> (<em>str</em>) – the path of the model (default: <code class="docutils literal notranslate"><span class="pre">None</span></code>)
+| if <code class="docutils literal notranslate"><span class="pre">model_path</span></code> is <code class="docutils literal notranslate"><span class="pre">None</span></code>, the model will be loaded from <code class="docutils literal notranslate"><span class="pre">self._modelSavePath</span> <span class="pre">+</span> <span class="pre">&quot;/&quot;</span> <span class="pre">+</span> <span class="pre">self._modelName</span> <span class="pre">+</span> <span class="pre">&quot;.pkl&quot;</span></code></p></li>
+<li><p><strong>use_dict</strong> (<em>bool</em>) – whether use dict to load the model (default: <code class="docutils literal notranslate"><span class="pre">False</span></code>)
+| if <code class="docutils literal notranslate"><span class="pre">use_dict</span></code> is <code class="docutils literal notranslate"><span class="pre">True</span></code>, the model will be loaded from <code class="docutils literal notranslate"><span class="pre">model_path</span></code> as dict</p></li>
+<li><p><strong>only_return</strong> (<em>bool</em>) – whether only return the result (default: <code class="docutils literal notranslate"><span class="pre">False</span></code>)
+| if <code class="docutils literal notranslate"><span class="pre">only_return</span></code> is <code class="docutils literal notranslate"><span class="pre">True</span></code>, the result will not be saved as file</p></li>
+<li><p><strong>map_location</strong> (<em>str</em>) – the location of the model (default: <code class="docutils literal notranslate"><span class="pre">None</span></code>)
+the location can be <code class="docutils literal notranslate"><span class="pre">&quot;cpu&quot;</span></code> or <code class="docutils literal notranslate"><span class="pre">&quot;cuda&quot;</span></code></p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>the Pandas dataframe of the result</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>dataframe</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="gnnwr.models.GNNWR.result">
+<span class="sig-name descname"><span class="pre">result</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_dict</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">map_location</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/gnnwr/models.html#GNNWR.result"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gnnwr.models.GNNWR.result" title="Link to this definition"></a></dt>
+<dd><p>print the result of the model, including the model structure, optimizer,the result of test dataset</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>path</strong> (<em>str</em>) – the path of the model(default: <code class="docutils literal notranslate"><span class="pre">None</span></code>)
+| if <code class="docutils literal notranslate"><span class="pre">path</span></code> is <code class="docutils literal notranslate"><span class="pre">None</span></code>, the model will be loaded from <code class="docutils literal notranslate"><span class="pre">self._modelSavePath</span> <span class="pre">+</span> <span class="pre">&quot;/&quot;</span> <span class="pre">+</span> <span class="pre">self._modelName</span> <span class="pre">+</span> <span class="pre">&quot;.pkl&quot;</span></code></p></li>
+<li><p><strong>use_dict</strong> (<em>bool</em>) – whether use dict to load the model (default: <code class="docutils literal notranslate"><span class="pre">False</span></code>)
+| if <code class="docutils literal notranslate"><span class="pre">use_dict</span></code> is <code class="docutils literal notranslate"><span class="pre">True</span></code>, the model will be loaded from <code class="docutils literal notranslate"><span class="pre">path</span></code> as dict</p></li>
+<li><p><strong>map_location</strong> (<em>str</em>) – the location of the model (default: <code class="docutils literal notranslate"><span class="pre">None</span></code>)
+the location can be <code class="docutils literal notranslate"><span class="pre">&quot;cpu&quot;</span></code> or <code class="docutils literal notranslate"><span class="pre">&quot;cuda&quot;</span></code></p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="gnnwr.models.GNNWR.run">
+<span class="sig-name descname"><span class="pre">run</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">max_epoch</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">early_stop</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">-1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">print_frequency</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">50</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">show_detailed_info</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/gnnwr/models.html#GNNWR.run"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gnnwr.models.GNNWR.run" title="Link to this definition"></a></dt>
+<dd><p>train the model and validate the model</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>max_epoch</strong> (<em>int</em>) – the max epoch of the training (default: <code class="docutils literal notranslate"><span class="pre">1</span></code>)</p></li>
+<li><p><strong>early_stop</strong> (<em>int</em>) – <p>if the model has not been updated for <code class="docutils literal notranslate"><span class="pre">early_stop</span></code> epochs, the training will stop (default: <code class="docutils literal notranslate"><span class="pre">-1</span></code>)</p>
+<p>if <code class="docutils literal notranslate"><span class="pre">early_stop</span></code> is <code class="docutils literal notranslate"><span class="pre">-1</span></code>, the training will not stop until the max epoch</p>
+</p></li>
+<li><p><strong>print_frequency</strong> (<em>int</em>) – the frequency of printing the information (default: <code class="docutils literal notranslate"><span class="pre">50</span></code>)</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="gnnwr.models.GTNNWR">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">gnnwr.models.</span></span><span class="sig-name descname"><span class="pre">GTNNWR</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">train_dataset</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">valid_dataset</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">test_dataset</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dense_layers</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">start_lr</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">optimizer</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'Adam'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">drop_out</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">batch_norm</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">activate_func</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">PReLU(num_parameters=1)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model_name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'GTNNWR_20231128-111456'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model_save_path</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'../gtnnwr_models'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">write_path</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'../gtnnwr_runs/20231128-111456'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_gpu</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_ols</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">log_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'../gtnnwr_logs/'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">log_file_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'gtnnwr20231128-111456.log'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">log_level</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">20</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">optimizer_params</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">STPNN_outsize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">STNN_SPNN_params</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/gnnwr/models.html#GTNNWR"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gnnwr.models.GTNNWR" title="Link to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="#gnnwr.models.GNNWR" title="gnnwr.models.GNNWR"><code class="xref py py-class docutils literal notranslate"><span class="pre">GNNWR</span></code></a></p>
+<p>GTNNWR model is a model based on GNNWR and STPNN, which is a model that can be used to solve the problem of
+spatial-temporal non-stationarity.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>train_dataset</strong> (<a class="reference internal" href="datasets.html#gnnwr.datasets.baseDataset" title="gnnwr.datasets.baseDataset"><em>baseDataset</em></a>) – the dataset for training</p></li>
+<li><p><strong>valid_dataset</strong> (<a class="reference internal" href="datasets.html#gnnwr.datasets.baseDataset" title="gnnwr.datasets.baseDataset"><em>baseDataset</em></a>) – the dataset for validation</p></li>
+<li><p><strong>test_dataset</strong> (<a class="reference internal" href="datasets.html#gnnwr.datasets.baseDataset" title="gnnwr.datasets.baseDataset"><em>baseDataset</em></a>) – the dataset for test</p></li>
+<li><p><strong>dense_layers</strong> (<em>list</em>) – the dense layers of the model (default: <code class="docutils literal notranslate"><span class="pre">None</span></code>)
+| i.e. <code class="docutils literal notranslate"><span class="pre">[[3],[128,64,32]]</span></code> the first list in input is hidden layers of STPNN, the second one is hidden layers of SWNN.</p></li>
+<li><p><strong>start_lr</strong> (<em>float</em>) – the start learning rate (default: <code class="docutils literal notranslate"><span class="pre">0.1</span></code>)</p></li>
+<li><p><strong>optimizer</strong> (<em>str</em><em>, </em><em>optional</em>) – the optimizer of the model (default: <code class="docutils literal notranslate"><span class="pre">&quot;Adagrad&quot;</span></code>)
+choose from “SGD”,”Adam”,”RMSprop”,”Adagrad”,”Adadelta”</p></li>
+<li><p><strong>drop_out</strong> (<em>float</em>) – the drop out rate of the model (default: <code class="docutils literal notranslate"><span class="pre">0.2</span></code>)</p></li>
+<li><p><strong>batch_norm</strong> (<em>bool</em><em>, </em><em>optional</em>) – whether use batch normalization (default: <code class="docutils literal notranslate"><span class="pre">True</span></code>)</p></li>
+<li><p><strong>activate_func</strong> (<em>torch.nn</em>) – the activate function of the model (default: <code class="docutils literal notranslate"><span class="pre">nn.PReLU(init=0.4)</span></code>)</p></li>
+<li><p><strong>model_name</strong> (<em>str</em>) – the name of the model (default: <code class="docutils literal notranslate"><span class="pre">&quot;GNNWR_&quot;</span> <span class="pre">+</span> <span class="pre">datetime.datetime.today().strftime(&quot;%Y%m%d-%H%M%S&quot;)</span></code>)</p></li>
+<li><p><strong>model_save_path</strong> (<em>str</em>) – the path of the model (default: <code class="docutils literal notranslate"><span class="pre">&quot;../gnnwr_models&quot;</span></code>)</p></li>
+<li><p><strong>write_path</strong> (<em>str</em>) – the path of the log (default: <code class="docutils literal notranslate"><span class="pre">&quot;../gnnwr_runs/&quot;</span> <span class="pre">+</span> <span class="pre">datetime.datetime.now().strftime(&quot;%Y%m%d-%H%M%S&quot;)</span></code>)</p></li>
+<li><p><strong>use_gpu</strong> (<em>bool</em>) – whether use gpu or not (default: <code class="docutils literal notranslate"><span class="pre">True</span></code>)</p></li>
+<li><p><strong>use_ols</strong> (<em>bool</em>) – whether use ols or not (default: <code class="docutils literal notranslate"><span class="pre">True</span></code>)</p></li>
+<li><p><strong>log_path</strong> (<em>str</em>) – the path of the log (default: <code class="docutils literal notranslate"><span class="pre">&quot;../gnnwr_logs/&quot;</span></code>)</p></li>
+<li><p><strong>log_file_name</strong> (<em>str</em>) – the name of the log (default: <code class="docutils literal notranslate"><span class="pre">&quot;gnnwr&quot;</span> <span class="pre">+</span> <span class="pre">datetime.datetime.now().strftime(&quot;%Y%m%d-%H%M%S&quot;)</span> <span class="pre">+</span> <span class="pre">&quot;.log&quot;</span></code>)</p></li>
+<li><p><strong>log_level</strong> (<em>int</em>) – the level of the log (default: <code class="docutils literal notranslate"><span class="pre">logging.INFO</span></code>)</p></li>
+<li><p><strong>optimizer_params</strong> (<em>dict</em><em>, </em><em>optional</em>) – <p>the params of the optimizer and the scheduler (default: <code class="docutils literal notranslate"><span class="pre">None</span></code>)</p>
+<p>if optimizer is SGD, the params are:</p>
+<blockquote>
+<div><div class="line-block">
+<div class="line">maxlr: float, the max learning rate (default: <code class="docutils literal notranslate"><span class="pre">0.1</span></code>)</div>
+</div>
+<div class="line-block">
+<div class="line">minlr: float, the min learning rate (default: <code class="docutils literal notranslate"><span class="pre">0.01</span></code>)</div>
+</div>
+<div class="line-block">
+<div class="line">upepoch: int, the epoch of learning rate up (default: <code class="docutils literal notranslate"><span class="pre">10000</span></code>)</div>
+</div>
+<div class="line-block">
+<div class="line">decayepoch: int, the epoch of learning rate decay (default: <code class="docutils literal notranslate"><span class="pre">20000</span></code>)</div>
+</div>
+<div class="line-block">
+<div class="line">decayrate: float, the rate of learning rate decay (default: <code class="docutils literal notranslate"><span class="pre">0.1</span></code>)</div>
+</div>
+<div class="line-block">
+<div class="line">stop_change_epoch: int, the epoch of learning rate stop change (default: <code class="docutils literal notranslate"><span class="pre">30000</span></code>)</div>
+</div>
+<div class="line-block">
+<div class="line">stop_lr: float, the learning rate when stop change (default: <code class="docutils literal notranslate"><span class="pre">0.001</span></code>)</div>
+</div>
+</div></blockquote>
+<p>if optimizer is Other, the params are:</p>
+<blockquote>
+<div><div class="line-block">
+<div class="line">scheduler: str, the name of the scheduler (default: <code class="docutils literal notranslate"><span class="pre">&quot;CosineAnnealingWarmRestarts&quot;</span></code>) in {<code class="docutils literal notranslate"><span class="pre">&quot;MultiStepLR&quot;,&quot;CosineAnnealingLR&quot;,&quot;CosineAnnealingWarmRestarts&quot;</span></code>}</div>
+</div>
+<div class="line-block">
+<div class="line">scheduler_milestones: list, the milestones of the scheduler MultiStepLR (default: <code class="docutils literal notranslate"><span class="pre">[500,1000,2000,4000]</span></code>)</div>
+</div>
+<div class="line-block">
+<div class="line">scheduler_gamma: float, the gamma of the scheduler MultiStepLR (default: <code class="docutils literal notranslate"><span class="pre">0.5</span></code>)</div>
+</div>
+<div class="line-block">
+<div class="line">scheduler_T_max: int, the T_max of the scheduler CosineAnnealingLR (default: <code class="docutils literal notranslate"><span class="pre">1000</span></code>)</div>
+</div>
+<div class="line-block">
+<div class="line">scheduler_eta_min: float, the eta_min of the scheduler CosineAnnealingLR and CosineAnnealingWarmRestarts (default: <code class="docutils literal notranslate"><span class="pre">0.01</span></code>)</div>
+</div>
+<div class="line-block">
+<div class="line">scheduler_T_0: int, the T_0 of the scheduler CosineAnnealingWarmRestarts (default: <code class="docutils literal notranslate"><span class="pre">100</span></code>)</div>
+</div>
+<div class="line-block">
+<div class="line">scheduler_T_mult: int, the T_mult of the scheduler CosineAnnealingWarmRestarts (default: <code class="docutils literal notranslate"><span class="pre">3</span></code>)</div>
+</div>
+</div></blockquote>
+</p></li>
+<li><p><strong>STPNN_outsize</strong> (<em>int</em>) – the output size of STPNN(default:<code class="docutils literal notranslate"><span class="pre">1</span></code>)</p></li>
+<li><p><strong>STNN_SPNN_params</strong> (<em>dict</em>) – <p>the params of STNN and SPNN(default:<code class="docutils literal notranslate"><span class="pre">None</span></code>)</p>
+<p>STPNN_batch_norm:bool</p>
+<blockquote>
+<div><p>whether use batchnorm in STNN and SPNN or not (Default:<code class="docutils literal notranslate"><span class="pre">True</span></code>)</p>
+</div></blockquote>
+</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="datasets.html" class="btn btn-neutral float-left" title="gnnwr.datasets module" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="networks.html" class="btn btn-neutral float-right" title="gnnwr.networks module" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2023, gnnwr.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

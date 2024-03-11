@@ -1,0 +1,7 @@
+gnnwr.models module
+-------------------
+
+.. automodule:: gnnwr.models
+   :members:
+   :undoc-members:
+   :show-inheritance:

@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>gnnwr.utils &mdash; GNNWR 0.1.4 documentation</title>
+      <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="../../_static/documentation_options.js?v=fd825880"></script>
+        <script src="../../_static/doctools.js?v=888ff710"></script>
+        <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            GNNWR
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../gnnwr/datasets.html">gnnwr.datasets module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../gnnwr/models.html">gnnwr.models module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../gnnwr/networks.html">gnnwr.networks module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../gnnwr/utils.html">gnnwr.utils module</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">GNNWR</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">gnnwr.utils</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for gnnwr.utils</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">math</span>
+<span class="kn">import</span> <span class="nn">statsmodels.api</span> <span class="k">as</span> <span class="nn">sm</span>
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="kn">import</span> <span class="nn">torch</span>
+<span class="kn">import</span> <span class="nn">warnings</span>
+<span class="kn">import</span> <span class="nn">copy</span>
+<span class="kn">import</span> <span class="nn">folium</span>
+<span class="kn">from</span> <span class="nn">folium.plugins</span> <span class="kn">import</span> <span class="n">HeatMap</span><span class="p">,</span> <span class="n">MarkerCluster</span>
+<span class="kn">import</span> <span class="nn">branca</span>
+
+
+<div class="viewcode-block" id="OLS">
+<a class="viewcode-back" href="../../gnnwr/utils.html#gnnwr.utils.OLS">[docs]</a>
+<span class="k">class</span> <span class="nc">OLS</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    OLS is the class to calculate the OLR weights of data.Get the weight by `object.params`.</span>
+
+<span class="sd">    :param dataset: Input data</span>
+<span class="sd">    :param xName: the independent variables&#39; column</span>
+<span class="sd">    :param yName: the dependent variable&#39;s column</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset</span><span class="p">,</span> <span class="n">xName</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span> <span class="n">yName</span><span class="p">:</span> <span class="nb">list</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__dataset</span> <span class="o">=</span> <span class="n">dataset</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__xName</span> <span class="o">=</span> <span class="n">xName</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__yName</span> <span class="o">=</span> <span class="n">yName</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__formula</span> <span class="o">=</span> <span class="n">yName</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="s1">&#39;~&#39;</span> <span class="o">+</span> <span class="s1">&#39;+&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">xName</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__fit</span> <span class="o">=</span> <span class="n">sm</span><span class="o">.</span><span class="n">formula</span><span class="o">.</span><span class="n">ols</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__formula</span><span class="p">,</span> <span class="n">dataset</span><span class="p">)</span><span class="o">.</span><span class="n">fit</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">params</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__fit</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">to_dict</span><span class="p">()</span><span class="o">.</span><span class="n">values</span><span class="p">())</span>
+        <span class="n">intercept</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__fit</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">params</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">intercept</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="DIAGNOSIS">
+<a class="viewcode-back" href="../../gnnwr/utils.html#gnnwr.utils.DIAGNOSIS">[docs]</a>
+<span class="k">class</span> <span class="nc">DIAGNOSIS</span><span class="p">:</span>
+    <span class="c1"># TODO 更多诊断方法</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Diagnosis is the class to calculate the diagnoses of GNNWR/GTNNWR.</span>
+
+<span class="sd">    :param weight: output of the neural network</span>
+<span class="sd">    :param x_data: the independent variables</span>
+<span class="sd">    :param y_data: the dependent variables</span>
+<span class="sd">    :param y_pred: output of the GNNWR/GTNNWR</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">weight</span><span class="p">,</span> <span class="n">x_data</span><span class="p">,</span> <span class="n">y_data</span><span class="p">,</span> <span class="n">y_pred</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__weight</span> <span class="o">=</span> <span class="n">weight</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__x_data</span> <span class="o">=</span> <span class="n">x_data</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__y_data</span> <span class="o">=</span> <span class="n">y_data</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__y_pred</span> <span class="o">=</span> <span class="n">y_pred</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__n</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">y_data</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__k</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">x_data</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">__residual</span> <span class="o">=</span> <span class="n">y_data</span> <span class="o">-</span> <span class="n">y_pred</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__ssr</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">sum</span><span class="p">((</span><span class="n">y_pred</span> <span class="o">-</span> <span class="n">torch</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">y_data</span><span class="p">))</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">__hat_com</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">mm</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">inv</span><span class="p">(</span>
+            <span class="n">torch</span><span class="o">.</span><span class="n">mm</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__x_data</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="o">-</span><span class="mi">2</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">__x_data</span><span class="p">)),</span> <span class="bp">self</span><span class="o">.</span><span class="n">__x_data</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="o">-</span><span class="mi">2</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__ols_hat</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">mm</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__x_data</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">__hat_com</span><span class="p">)</span>
+        <span class="n">x_data_tile</span> <span class="o">=</span> <span class="n">x_data</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__n</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="n">x_data_tile</span> <span class="o">=</span> <span class="n">x_data_tile</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__n</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">__n</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">x_data_tile_t</span> <span class="o">=</span> <span class="n">x_data_tile</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+        <span class="n">gtweight_3d</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">diag_embed</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__weight</span><span class="p">)</span>
+        <span class="n">hatS_temp</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">matmul</span><span class="p">(</span><span class="n">gtweight_3d</span><span class="p">,</span>
+                                 <span class="n">torch</span><span class="o">.</span><span class="n">matmul</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">inverse</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">matmul</span><span class="p">(</span><span class="n">x_data_tile_t</span><span class="p">,</span> <span class="n">x_data_tile</span><span class="p">)),</span> <span class="n">x_data_tile_t</span><span class="p">))</span>
+        <span class="n">hatS</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">matmul</span><span class="p">(</span><span class="n">x_data</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">x_data</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">1</span><span class="p">)),</span> <span class="n">hatS_temp</span><span class="p">)</span>
+        <span class="n">hatS</span> <span class="o">=</span> <span class="n">hatS</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">__n</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__hat</span> <span class="o">=</span> <span class="n">hatS</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__S</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">trace</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__hat</span><span class="p">)</span>
+
+<div class="viewcode-block" id="DIAGNOSIS.hat">
+<a class="viewcode-back" href="../../gnnwr/utils.html#gnnwr.utils.DIAGNOSIS.hat">[docs]</a>
+    <span class="k">def</span> <span class="nf">hat</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        :return: hat matrix</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__hat</span></div>
+
+
+<div class="viewcode-block" id="DIAGNOSIS.F1_GNN">
+<a class="viewcode-back" href="../../gnnwr/utils.html#gnnwr.utils.DIAGNOSIS.F1_GNN">[docs]</a>
+    <span class="k">def</span> <span class="nf">F1_GNN</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        :return: F1-test</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">k1</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__n</span> <span class="o">-</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">torch</span><span class="o">.</span><span class="n">trace</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__hat</span><span class="p">)</span> <span class="o">+</span> \
+             <span class="n">torch</span><span class="o">.</span><span class="n">trace</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">mm</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__hat</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="o">-</span><span class="mi">2</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">__hat</span><span class="p">))</span>
+        <span class="n">k2</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__n</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">__k</span> <span class="o">-</span> <span class="mi">1</span>
+        <span class="n">rss_olr</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span>
+            <span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__y_data</span><span class="p">)</span> <span class="o">-</span> <span class="n">torch</span><span class="o">.</span><span class="n">mm</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__ols_hat</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">__y_data</span><span class="p">))</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__ssr</span> <span class="o">/</span> <span class="n">k1</span> <span class="o">/</span> <span class="p">(</span><span class="n">rss_olr</span> <span class="o">/</span> <span class="n">k2</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="DIAGNOSIS.AIC">
+<a class="viewcode-back" href="../../gnnwr/utils.html#gnnwr.utils.DIAGNOSIS.AIC">[docs]</a>
+    <span class="k">def</span> <span class="nf">AIC</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        :return: AIC</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__n</span> <span class="o">*</span> <span class="p">(</span><span class="n">math</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__ssr</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">__n</span> <span class="o">*</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">pi</span><span class="p">,</span> <span class="n">math</span><span class="o">.</span><span class="n">e</span><span class="p">))</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">__n</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">__k</span></div>
+
+
+<div class="viewcode-block" id="DIAGNOSIS.AICc">
+<a class="viewcode-back" href="../../gnnwr/utils.html#gnnwr.utils.DIAGNOSIS.AICc">[docs]</a>
+    <span class="k">def</span> <span class="nf">AICc</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+
+<span class="sd">        :return: AICc</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__n</span> <span class="o">*</span> <span class="p">(</span><span class="n">math</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__ssr</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">__n</span> <span class="o">*</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">pi</span><span class="p">,</span> <span class="n">math</span><span class="o">.</span><span class="n">e</span><span class="p">)</span> <span class="o">+</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__n</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">__S</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">__n</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">__S</span> <span class="o">-</span> <span class="mi">2</span><span class="p">))</span></div>
+
+
+<div class="viewcode-block" id="DIAGNOSIS.R2">
+<a class="viewcode-back" href="../../gnnwr/utils.html#gnnwr.utils.DIAGNOSIS.R2">[docs]</a>
+    <span class="k">def</span> <span class="nf">R2</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+
+<span class="sd">        :return: R2 of the result</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">torch</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__residual</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span> <span class="o">/</span> <span class="n">torch</span><span class="o">.</span><span class="n">sum</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">__y_data</span> <span class="o">-</span> <span class="n">torch</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__y_data</span><span class="p">))</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="DIAGNOSIS.Adjust_R2">
+<a class="viewcode-back" href="../../gnnwr/utils.html#gnnwr.utils.DIAGNOSIS.Adjust_R2">[docs]</a>
+    <span class="k">def</span> <span class="nf">Adjust_R2</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+
+<span class="sd">        :return: Adjust R2 of the result</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="mi">1</span> <span class="o">-</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">R2</span><span class="p">())</span> <span class="o">*</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__n</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__n</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">__k</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="DIAGNOSIS.RMSE">
+<a class="viewcode-back" href="../../gnnwr/utils.html#gnnwr.utils.DIAGNOSIS.RMSE">[docs]</a>
+    <span class="k">def</span> <span class="nf">RMSE</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+
+<span class="sd">        :return: RMSE of the result</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">torch</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__residual</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">__n</span><span class="p">)</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="Visualize">
+<a class="viewcode-back" href="../../gnnwr/utils.html#gnnwr.utils.Visualize">[docs]</a>
+<span class="k">class</span> <span class="nc">Visualize</span><span class="p">:</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">lon_lat_columns</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">zoom</span><span class="o">=</span><span class="mi">4</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__raw_data</span> <span class="o">=</span> <span class="n">data</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__tiles</span> <span class="o">=</span> <span class="s1">&#39;https://wprd01.is.autonavi.com/appmaptile?x=</span><span class="si">{x}</span><span class="s1">&amp;y=</span><span class="si">{y}</span><span class="s1">&amp;z=</span><span class="si">{z}</span><span class="s1">&amp;lang=en&amp;size=1&amp;scl=1&amp;style=7&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__zoom</span> <span class="o">=</span> <span class="n">zoom</span>
+        <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__raw_data</span><span class="p">,</span> <span class="s1">&#39;_use_gpu&#39;</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_train_dataset</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__raw_data</span><span class="o">.</span><span class="n">_train_dataset</span><span class="o">.</span><span class="n">dataframe</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_valid_dataset</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__raw_data</span><span class="o">.</span><span class="n">_valid_dataset</span><span class="o">.</span><span class="n">dataframe</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_test_dataset</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__raw_data</span><span class="o">.</span><span class="n">_test_dataset</span><span class="o">.</span><span class="n">dataframe</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_result_data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__raw_data</span><span class="o">.</span><span class="n">result_data</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_all_data</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">_train_dataset</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_valid_dataset</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_test_dataset</span><span class="p">])</span>
+            <span class="k">if</span> <span class="n">lon_lat_columns</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s2">&quot;lon_lat columns are not given. Using the spatial columns in dataset&quot;</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_spatial_column</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_train_dataset</span><span class="o">.</span><span class="n">spatial_column</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">__center_lon</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_all_data</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_spatial_column</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">__center_lat</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_all_data</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_spatial_column</span><span class="p">[</span><span class="mi">1</span><span class="p">]]</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">__lon_column</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_spatial_column</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">__lat_column</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_spatial_column</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_spatial_column</span> <span class="o">=</span> <span class="n">lon_lat_columns</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">__center_lon</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_all_data</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_spatial_column</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">__center_lat</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_all_data</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_spatial_column</span><span class="p">[</span><span class="mi">1</span><span class="p">]]</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">__lon_column</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_spatial_column</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">__lat_column</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_spatial_column</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_x_column</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">_train_dataset</span><span class="o">.</span><span class="n">x_column</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_y_column</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">_train_dataset</span><span class="o">.</span><span class="n">y_column</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">__map</span> <span class="o">=</span> <span class="n">folium</span><span class="o">.</span><span class="n">Map</span><span class="p">(</span><span class="n">location</span><span class="o">=</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">__center_lat</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">__center_lon</span><span class="p">],</span> <span class="n">zoom_start</span><span class="o">=</span><span class="n">zoom</span><span class="p">,</span>
+                                    <span class="n">tiles</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">__tiles</span><span class="p">,</span> <span class="n">attr</span><span class="o">=</span><span class="s2">&quot;高德&quot;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;given data is not instance of GNNWR&quot;</span><span class="p">)</span>
+
+<div class="viewcode-block" id="Visualize.display_dataset">
+<a class="viewcode-back" href="../../gnnwr/utils.html#gnnwr.utils.Visualize.display_dataset">[docs]</a>
+    <span class="k">def</span> <span class="nf">display_dataset</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;all&quot;</span><span class="p">,</span> <span class="n">y_column</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">colors</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">steps</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span> <span class="n">vmin</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">vmax</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="c1"># colormap = branca.colormap.linear.RdYlGn_10.scale().to_step(steps)</span>
+        <span class="k">if</span> <span class="n">colors</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">colors</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">if</span> <span class="n">y_column</span> <span class="o">==</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s2">&quot;y_column is not given. Using the first y_column in dataset&quot;</span><span class="p">)</span>
+            <span class="n">y_column</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_y_column</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">name</span> <span class="o">==</span> <span class="s1">&#39;all&#39;</span><span class="p">:</span>
+            <span class="n">dst</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_all_data</span>
+        <span class="k">elif</span> <span class="n">name</span> <span class="o">==</span> <span class="s1">&#39;train&#39;</span><span class="p">:</span>
+            <span class="n">dst</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_train_dataset</span>
+        <span class="k">elif</span> <span class="n">name</span> <span class="o">==</span> <span class="s1">&#39;valid&#39;</span><span class="p">:</span>
+            <span class="n">dst</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_valid_dataset</span>
+        <span class="k">elif</span> <span class="n">name</span> <span class="o">==</span> <span class="s1">&#39;test&#39;</span><span class="p">:</span>
+            <span class="n">dst</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_test_dataset</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;name is not included in &#39;all&#39;,&#39;train&#39;,&#39;valid&#39;,&#39;test&#39;&quot;</span><span class="p">)</span>
+        <span class="n">dst_min</span> <span class="o">=</span> <span class="n">dst</span><span class="p">[</span><span class="n">y_column</span><span class="p">]</span><span class="o">.</span><span class="n">min</span><span class="p">()</span> <span class="k">if</span> <span class="n">vmin</span> <span class="o">==</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">vmin</span>
+        <span class="n">dst_max</span> <span class="o">=</span> <span class="n">dst</span><span class="p">[</span><span class="n">y_column</span><span class="p">]</span><span class="o">.</span><span class="n">max</span><span class="p">()</span> <span class="k">if</span> <span class="n">vmax</span> <span class="o">==</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">vmax</span>
+        <span class="n">res</span> <span class="o">=</span> <span class="n">folium</span><span class="o">.</span><span class="n">Map</span><span class="p">(</span><span class="n">location</span><span class="o">=</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">__center_lat</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">__center_lon</span><span class="p">],</span> <span class="n">zoom_start</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">__zoom</span><span class="p">,</span> <span class="n">tiles</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">__tiles</span><span class="p">,</span>
+                         <span class="n">attr</span><span class="o">=</span><span class="s2">&quot;高德&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">colors</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">colormap</span> <span class="o">=</span> <span class="n">branca</span><span class="o">.</span><span class="n">colormap</span><span class="o">.</span><span class="n">linear</span><span class="o">.</span><span class="n">YlOrRd_09</span><span class="o">.</span><span class="n">scale</span><span class="p">(</span><span class="n">dst_min</span><span class="p">,</span> <span class="n">dst_max</span><span class="p">)</span><span class="o">.</span><span class="n">to_step</span><span class="p">(</span><span class="n">steps</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">colormap</span> <span class="o">=</span> <span class="n">branca</span><span class="o">.</span><span class="n">colormap</span><span class="o">.</span><span class="n">LinearColormap</span><span class="p">(</span><span class="n">colors</span><span class="o">=</span><span class="n">colors</span><span class="p">,</span> <span class="n">vmin</span><span class="o">=</span><span class="n">dst_min</span><span class="p">,</span> <span class="n">vmax</span><span class="o">=</span><span class="n">dst_max</span><span class="p">)</span><span class="o">.</span><span class="n">to_step</span><span class="p">(</span><span class="n">steps</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">idx</span><span class="p">,</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">dst</span><span class="o">.</span><span class="n">iterrows</span><span class="p">():</span>
+            <span class="n">folium</span><span class="o">.</span><span class="n">CircleMarker</span><span class="p">(</span><span class="n">location</span><span class="o">=</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">__lat_column</span><span class="p">],</span> <span class="n">row</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">__lon_column</span><span class="p">]),</span> <span class="n">radius</span><span class="o">=</span><span class="mi">7</span><span class="p">,</span>
+                                <span class="n">color</span><span class="o">=</span><span class="n">colormap</span><span class="o">.</span><span class="n">rgb_hex_str</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="n">y_column</span><span class="p">]),</span> <span class="n">fill</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">fill_opacity</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+                                <span class="n">popup</span><span class="o">=</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">            longitude:</span><span class="si">{}</span>
+<span class="s2">            latitude:</span><span class="si">{}</span>
+<span class="s2">            </span><span class="si">{}</span><span class="s2">:</span><span class="si">{}</span>
+<span class="s2">            &quot;&quot;&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">__lon_column</span><span class="p">],</span> <span class="n">row</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">__lat_column</span><span class="p">],</span> <span class="n">y_column</span><span class="p">,</span> <span class="n">row</span><span class="p">[</span><span class="n">y_column</span><span class="p">])</span>
+                                <span class="p">)</span><span class="o">.</span><span class="n">add_to</span><span class="p">(</span><span class="n">res</span><span class="p">)</span>
+        <span class="n">res</span><span class="o">.</span><span class="n">add_child</span><span class="p">(</span><span class="n">colormap</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">res</span></div>
+
+
+<div class="viewcode-block" id="Visualize.weights_heatmap">
+<a class="viewcode-back" href="../../gnnwr/utils.html#gnnwr.utils.Visualize.weights_heatmap">[docs]</a>
+    <span class="k">def</span> <span class="nf">weights_heatmap</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data_column</span><span class="p">,</span> <span class="n">colors</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">steps</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span> <span class="n">vmin</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">vmax</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">colors</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">colors</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">res</span> <span class="o">=</span> <span class="n">folium</span><span class="o">.</span><span class="n">Map</span><span class="p">(</span><span class="n">location</span><span class="o">=</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">__center_lat</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">__center_lon</span><span class="p">],</span> <span class="n">zoom_start</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">__zoom</span><span class="p">,</span> <span class="n">tiles</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">__tiles</span><span class="p">,</span>
+                         <span class="n">attr</span><span class="o">=</span><span class="s2">&quot;高德&quot;</span><span class="p">)</span>
+        <span class="n">dst</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_result_data</span>
+        <span class="n">dst_min</span> <span class="o">=</span> <span class="n">dst</span><span class="p">[</span><span class="n">data_column</span><span class="p">]</span><span class="o">.</span><span class="n">min</span><span class="p">()</span> <span class="k">if</span> <span class="n">vmin</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">vmin</span>
+        <span class="n">dst_max</span> <span class="o">=</span> <span class="n">dst</span><span class="p">[</span><span class="n">data_column</span><span class="p">]</span><span class="o">.</span><span class="n">max</span><span class="p">()</span> <span class="k">if</span> <span class="n">vmax</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">vmax</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="p">[[</span><span class="n">row</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">__lat_column</span><span class="p">],</span> <span class="n">row</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">__lon_column</span><span class="p">],</span> <span class="n">row</span><span class="p">[</span><span class="n">data_column</span><span class="p">]]</span> <span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">dst</span><span class="o">.</span><span class="n">iterrows</span><span class="p">()]</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">colors</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">colormap</span> <span class="o">=</span> <span class="n">branca</span><span class="o">.</span><span class="n">colormap</span><span class="o">.</span><span class="n">linear</span><span class="o">.</span><span class="n">YlOrRd_09</span><span class="o">.</span><span class="n">scale</span><span class="p">(</span><span class="n">dst_min</span><span class="p">,</span> <span class="n">dst_max</span><span class="p">)</span><span class="o">.</span><span class="n">to_step</span><span class="p">(</span><span class="n">steps</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">colormap</span> <span class="o">=</span> <span class="n">branca</span><span class="o">.</span><span class="n">colormap</span><span class="o">.</span><span class="n">LinearColormap</span><span class="p">(</span><span class="n">colors</span><span class="o">=</span><span class="n">colors</span><span class="p">,</span> <span class="n">vmin</span><span class="o">=</span><span class="n">dst_min</span><span class="p">,</span> <span class="n">vmax</span><span class="o">=</span><span class="n">dst_max</span><span class="p">)</span><span class="o">.</span><span class="n">to_step</span><span class="p">(</span><span class="n">steps</span><span class="p">)</span>
+        <span class="n">gradient_map</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">steps</span><span class="p">):</span>
+            <span class="n">gradient_map</span><span class="p">[</span><span class="n">i</span> <span class="o">/</span> <span class="n">steps</span><span class="p">]</span> <span class="o">=</span> <span class="n">colormap</span><span class="o">.</span><span class="n">rgb_hex_str</span><span class="p">(</span><span class="n">i</span> <span class="o">/</span> <span class="n">steps</span><span class="p">)</span>
+        <span class="n">colormap</span><span class="o">.</span><span class="n">add_to</span><span class="p">(</span><span class="n">res</span><span class="p">)</span>
+        <span class="n">HeatMap</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">data</span><span class="p">,</span> <span class="n">gradient</span><span class="o">=</span><span class="n">gradient_map</span><span class="p">,</span> <span class="n">radius</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span><span class="o">.</span><span class="n">add_to</span><span class="p">(</span><span class="n">res</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">res</span></div>
+
+
+<div class="viewcode-block" id="Visualize.dot_map">
+<a class="viewcode-back" href="../../gnnwr/utils.html#gnnwr.utils.Visualize.dot_map">[docs]</a>
+    <span class="k">def</span> <span class="nf">dot_map</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">lon_column</span><span class="p">,</span> <span class="n">lat_column</span><span class="p">,</span> <span class="n">y_column</span><span class="p">,</span> <span class="n">zoom</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span> <span class="n">colors</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">steps</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span> <span class="n">vmin</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">vmax</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">colors</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">colors</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">center_lon</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="n">lon_column</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span>
+        <span class="n">center_lat</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="n">lat_column</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span>
+        <span class="n">dst_min</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="n">y_column</span><span class="p">]</span><span class="o">.</span><span class="n">min</span><span class="p">()</span> <span class="k">if</span> <span class="n">vmin</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">vmin</span>
+        <span class="n">dst_max</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="n">y_column</span><span class="p">]</span><span class="o">.</span><span class="n">max</span><span class="p">()</span> <span class="k">if</span> <span class="n">vmax</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">vmax</span>
+        <span class="n">res</span> <span class="o">=</span> <span class="n">folium</span><span class="o">.</span><span class="n">Map</span><span class="p">(</span><span class="n">location</span><span class="o">=</span><span class="p">[</span><span class="n">center_lat</span><span class="p">,</span> <span class="n">center_lon</span><span class="p">],</span> <span class="n">zoom_start</span><span class="o">=</span><span class="n">zoom</span><span class="p">,</span> <span class="n">tiles</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">__tiles</span><span class="p">,</span> <span class="n">attr</span><span class="o">=</span><span class="s2">&quot;高德&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">colors</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">colormap</span> <span class="o">=</span> <span class="n">branca</span><span class="o">.</span><span class="n">colormap</span><span class="o">.</span><span class="n">linear</span><span class="o">.</span><span class="n">YlOrRd_09</span><span class="o">.</span><span class="n">scale</span><span class="p">(</span><span class="n">dst_min</span><span class="p">,</span> <span class="n">dst_max</span><span class="p">)</span><span class="o">.</span><span class="n">to_step</span><span class="p">(</span><span class="n">steps</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">colormap</span> <span class="o">=</span> <span class="n">branca</span><span class="o">.</span><span class="n">colormap</span><span class="o">.</span><span class="n">LinearColormap</span><span class="p">(</span><span class="n">colors</span><span class="o">=</span><span class="n">colors</span><span class="p">,</span> <span class="n">vmin</span><span class="o">=</span><span class="n">dst_min</span><span class="p">,</span> <span class="n">vmax</span><span class="o">=</span><span class="n">dst_max</span><span class="p">)</span><span class="o">.</span><span class="n">to_step</span><span class="p">(</span><span class="n">steps</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">idx</span><span class="p">,</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">data</span><span class="o">.</span><span class="n">iterrows</span><span class="p">():</span>
+            <span class="n">folium</span><span class="o">.</span><span class="n">CircleMarker</span><span class="p">(</span><span class="n">location</span><span class="o">=</span><span class="p">[</span><span class="n">row</span><span class="p">[</span><span class="n">lat_column</span><span class="p">],</span> <span class="n">row</span><span class="p">[</span><span class="n">lon_column</span><span class="p">]],</span> <span class="n">radius</span><span class="o">=</span><span class="mi">7</span><span class="p">,</span>
+                                <span class="n">color</span><span class="o">=</span><span class="n">colormap</span><span class="o">.</span><span class="n">rgb_hex_str</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="n">y_column</span><span class="p">]),</span> <span class="n">fill</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">fill_opacity</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+                                <span class="n">popup</span><span class="o">=</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">            longitude:</span><span class="si">{}</span>
+<span class="s2">            latitude:</span><span class="si">{}</span>
+<span class="s2">            </span><span class="si">{}</span><span class="s2">:</span><span class="si">{}</span>
+<span class="s2">            &quot;&quot;&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="n">lon_column</span><span class="p">],</span> <span class="n">row</span><span class="p">[</span><span class="n">lat_column</span><span class="p">],</span> <span class="n">y_column</span><span class="p">,</span> <span class="n">row</span><span class="p">[</span><span class="n">y_column</span><span class="p">])</span>
+                                <span class="p">)</span><span class="o">.</span><span class="n">add_to</span><span class="p">(</span><span class="n">res</span><span class="p">)</span>
+        <span class="n">colormap</span><span class="o">.</span><span class="n">add_to</span><span class="p">(</span><span class="n">res</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">res</span></div>
+</div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2023, gnnwr.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

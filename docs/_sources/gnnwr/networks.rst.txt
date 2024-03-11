@@ -1,0 +1,7 @@
+gnnwr.networks module
+---------------------
+
+.. automodule:: gnnwr.networks
+   :members:
+   :undoc-members:
+   :show-inheritance:

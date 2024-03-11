@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>gnnwr.utils module &mdash; GNNWR 0.1.4 documentation</title>
+      <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="../_static/documentation_options.js?v=fd825880"></script>
+        <script src="../_static/doctools.js?v=888ff710"></script>
+        <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="prev" title="gnnwr.networks module" href="networks.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            GNNWR
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="datasets.html">gnnwr.datasets module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="models.html">gnnwr.models module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="networks.html">gnnwr.networks module</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">gnnwr.utils module</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#gnnwr.utils.DIAGNOSIS"><code class="docutils literal notranslate"><span class="pre">DIAGNOSIS</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#gnnwr.utils.DIAGNOSIS.AIC"><code class="docutils literal notranslate"><span class="pre">DIAGNOSIS.AIC()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#gnnwr.utils.DIAGNOSIS.AICc"><code class="docutils literal notranslate"><span class="pre">DIAGNOSIS.AICc()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#gnnwr.utils.DIAGNOSIS.Adjust_R2"><code class="docutils literal notranslate"><span class="pre">DIAGNOSIS.Adjust_R2()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#gnnwr.utils.DIAGNOSIS.F1_GNN"><code class="docutils literal notranslate"><span class="pre">DIAGNOSIS.F1_GNN()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#gnnwr.utils.DIAGNOSIS.R2"><code class="docutils literal notranslate"><span class="pre">DIAGNOSIS.R2()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#gnnwr.utils.DIAGNOSIS.RMSE"><code class="docutils literal notranslate"><span class="pre">DIAGNOSIS.RMSE()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#gnnwr.utils.DIAGNOSIS.hat"><code class="docutils literal notranslate"><span class="pre">DIAGNOSIS.hat()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#gnnwr.utils.OLS"><code class="docutils literal notranslate"><span class="pre">OLS</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#gnnwr.utils.Visualize"><code class="docutils literal notranslate"><span class="pre">Visualize</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#gnnwr.utils.Visualize.display_dataset"><code class="docutils literal notranslate"><span class="pre">Visualize.display_dataset()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#gnnwr.utils.Visualize.dot_map"><code class="docutils literal notranslate"><span class="pre">Visualize.dot_map()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#gnnwr.utils.Visualize.weights_heatmap"><code class="docutils literal notranslate"><span class="pre">Visualize.weights_heatmap()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">GNNWR</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">gnnwr.utils module</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/gnnwr/utils.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="module-gnnwr.utils">
+<span id="gnnwr-utils-module"></span><h1>gnnwr.utils module<a class="headerlink" href="#module-gnnwr.utils" title="Link to this heading"></a></h1>
+<dl class="py class">
+<dt class="sig sig-object py" id="gnnwr.utils.DIAGNOSIS">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">gnnwr.utils.</span></span><span class="sig-name descname"><span class="pre">DIAGNOSIS</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">weight</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">x_data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y_data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y_pred</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/gnnwr/utils.html#DIAGNOSIS"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gnnwr.utils.DIAGNOSIS" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Diagnosis is the class to calculate the diagnoses of GNNWR/GTNNWR.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>weight</strong> – output of the neural network</p></li>
+<li><p><strong>x_data</strong> – the independent variables</p></li>
+<li><p><strong>y_data</strong> – the dependent variables</p></li>
+<li><p><strong>y_pred</strong> – output of the GNNWR/GTNNWR</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="gnnwr.utils.DIAGNOSIS.AIC">
+<span class="sig-name descname"><span class="pre">AIC</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/gnnwr/utils.html#DIAGNOSIS.AIC"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gnnwr.utils.DIAGNOSIS.AIC" title="Link to this definition"></a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>AIC</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="gnnwr.utils.DIAGNOSIS.AICc">
+<span class="sig-name descname"><span class="pre">AICc</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/gnnwr/utils.html#DIAGNOSIS.AICc"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gnnwr.utils.DIAGNOSIS.AICc" title="Link to this definition"></a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>AICc</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="gnnwr.utils.DIAGNOSIS.Adjust_R2">
+<span class="sig-name descname"><span class="pre">Adjust_R2</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/gnnwr/utils.html#DIAGNOSIS.Adjust_R2"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gnnwr.utils.DIAGNOSIS.Adjust_R2" title="Link to this definition"></a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Adjust R2 of the result</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="gnnwr.utils.DIAGNOSIS.F1_GNN">
+<span class="sig-name descname"><span class="pre">F1_GNN</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/gnnwr/utils.html#DIAGNOSIS.F1_GNN"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gnnwr.utils.DIAGNOSIS.F1_GNN" title="Link to this definition"></a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>F1-test</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="gnnwr.utils.DIAGNOSIS.R2">
+<span class="sig-name descname"><span class="pre">R2</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/gnnwr/utils.html#DIAGNOSIS.R2"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gnnwr.utils.DIAGNOSIS.R2" title="Link to this definition"></a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>R2 of the result</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="gnnwr.utils.DIAGNOSIS.RMSE">
+<span class="sig-name descname"><span class="pre">RMSE</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/gnnwr/utils.html#DIAGNOSIS.RMSE"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gnnwr.utils.DIAGNOSIS.RMSE" title="Link to this definition"></a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>RMSE of the result</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="gnnwr.utils.DIAGNOSIS.hat">
+<span class="sig-name descname"><span class="pre">hat</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/gnnwr/utils.html#DIAGNOSIS.hat"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gnnwr.utils.DIAGNOSIS.hat" title="Link to this definition"></a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>hat matrix</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="gnnwr.utils.OLS">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">gnnwr.utils.</span></span><span class="sig-name descname"><span class="pre">OLS</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dataset</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">xName</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">yName</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/gnnwr/utils.html#OLS"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gnnwr.utils.OLS" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>OLS is the class to calculate the OLR weights of data.Get the weight by <cite>object.params</cite>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>dataset</strong> – Input data</p></li>
+<li><p><strong>xName</strong> – the independent variables’ column</p></li>
+<li><p><strong>yName</strong> – the dependent variable’s column</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="gnnwr.utils.Visualize">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">gnnwr.utils.</span></span><span class="sig-name descname"><span class="pre">Visualize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lon_lat_columns</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">zoom</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">4</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/gnnwr/utils.html#Visualize"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gnnwr.utils.Visualize" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="gnnwr.utils.Visualize.display_dataset">
+<span class="sig-name descname"><span class="pre">display_dataset</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'all'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y_column</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">colors</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">steps</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">20</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">vmin</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">vmax</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/gnnwr/utils.html#Visualize.display_dataset"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gnnwr.utils.Visualize.display_dataset" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="gnnwr.utils.Visualize.dot_map">
+<span class="sig-name descname"><span class="pre">dot_map</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lon_column</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lat_column</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y_column</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">zoom</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">4</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">colors</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">steps</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">20</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">vmin</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">vmax</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/gnnwr/utils.html#Visualize.dot_map"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gnnwr.utils.Visualize.dot_map" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="gnnwr.utils.Visualize.weights_heatmap">
+<span class="sig-name descname"><span class="pre">weights_heatmap</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data_column</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">colors</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">steps</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">20</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">vmin</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">vmax</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/gnnwr/utils.html#Visualize.weights_heatmap"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gnnwr.utils.Visualize.weights_heatmap" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="networks.html" class="btn btn-neutral float-left" title="gnnwr.networks module" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2023, gnnwr.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

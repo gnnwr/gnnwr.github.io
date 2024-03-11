@@ -1,0 +1,7 @@
+gnnwr.datasets module
+---------------------
+
+.. automodule:: gnnwr.datasets
+   :members:
+   :undoc-members:
+   :show-inheritance:

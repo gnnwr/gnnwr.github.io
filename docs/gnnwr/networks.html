@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>gnnwr.networks module &mdash; GNNWR 0.1.4 documentation</title>
+      <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="../_static/documentation_options.js?v=fd825880"></script>
+        <script src="../_static/doctools.js?v=888ff710"></script>
+        <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="gnnwr.utils module" href="utils.html" />
+    <link rel="prev" title="gnnwr.models module" href="models.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            GNNWR
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="datasets.html">gnnwr.datasets module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="models.html">gnnwr.models module</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">gnnwr.networks module</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#gnnwr.networks.STNN_SPNN"><code class="docutils literal notranslate"><span class="pre">STNN_SPNN</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#gnnwr.networks.STNN_SPNN.forward"><code class="docutils literal notranslate"><span class="pre">STNN_SPNN.forward()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#gnnwr.networks.STPNN"><code class="docutils literal notranslate"><span class="pre">STPNN</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#gnnwr.networks.STPNN.forward"><code class="docutils literal notranslate"><span class="pre">STPNN.forward()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#gnnwr.networks.SWNN"><code class="docutils literal notranslate"><span class="pre">SWNN</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#gnnwr.networks.SWNN.forward"><code class="docutils literal notranslate"><span class="pre">SWNN.forward()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#gnnwr.networks.default_dense_layer"><code class="docutils literal notranslate"><span class="pre">default_dense_layer()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#gnnwr.networks.weight_share"><code class="docutils literal notranslate"><span class="pre">weight_share()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="utils.html">gnnwr.utils module</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">GNNWR</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">gnnwr.networks module</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/gnnwr/networks.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="module-gnnwr.networks">
+<span id="gnnwr-networks-module"></span><h1>gnnwr.networks module<a class="headerlink" href="#module-gnnwr.networks" title="Link to this heading"></a></h1>
+<dl class="py class">
+<dt class="sig sig-object py" id="gnnwr.networks.STNN_SPNN">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">gnnwr.networks.</span></span><span class="sig-name descname"><span class="pre">STNN_SPNN</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">STNN_insize</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">STNN_outsize</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">SPNN_insize</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">SPNN_outsize</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">activate_func</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">ReLU()</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/gnnwr/networks.html#STNN_SPNN"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gnnwr.networks.STNN_SPNN" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Module</span></code></p>
+<p>STNN_SPNN is a neural network with dense layers, which is used to calculate the spatial proximity of two nodes
+and temporal proximity of two nodes at the same time.
+| The each layer of STNN and SPNN is as follows:
+| full connection layer -&gt; activate function</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>STNN_insize</strong> (<em>int</em>) – input size of STNN(must be positive)</p></li>
+<li><p><strong>STNN_outsize</strong> (<em>int</em>) – Output size of STNN(must be positive)</p></li>
+<li><p><strong>SPNN_insize</strong> (<em>int</em>) – input size of SPNN(must be positive)</p></li>
+<li><p><strong>SPNN_outsize</strong> (<em>int</em>) – Output size of SPNN(must be positive)</p></li>
+<li><p><strong>activate_func</strong> (<em>torch.nn.functional</em>) – activate function(default: <code class="docutils literal notranslate"><span class="pre">nn.ReLU()</span></code>)</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="gnnwr.networks.STNN_SPNN.forward">
+<span class="sig-name descname"><span class="pre">forward</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">input1</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/gnnwr/networks.html#STNN_SPNN.forward"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gnnwr.networks.STNN_SPNN.forward" title="Link to this definition"></a></dt>
+<dd><p>Defines the computation performed at every call.</p>
+<p>Should be overridden by all subclasses.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Although the recipe for forward pass needs to be defined within
+this function, one should call the <code class="xref py py-class docutils literal notranslate"><span class="pre">Module</span></code> instance afterwards
+instead of this since the former takes care of running the
+registered hooks while the latter silently ignores them.</p>
+</div>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="gnnwr.networks.STPNN">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">gnnwr.networks.</span></span><span class="sig-name descname"><span class="pre">STPNN</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dense_layer</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">insize</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">outsize</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">drop_out</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">activate_func</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">ReLU()</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">batch_norm</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/gnnwr/networks.html#STPNN"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gnnwr.networks.STPNN" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Module</span></code></p>
+<p>STPNN is a neural network with dense layers, which is used to calculate the spatial and temporal proximity
+of two nodes.
+| The each layer of STPNN is as follows:
+| full connection layer -&gt; batch normalization layer -&gt; activate function -&gt; drop out layer</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>dense_layer</strong> (<em>list</em>) – a list of dense layers of Neural Network</p></li>
+<li><p><strong>insize</strong> (<em>int</em>) – input size of Neural Network(must be positive)</p></li>
+<li><p><strong>outsize</strong> (<em>int</em>) – Output size of Neural Network(must be positive)</p></li>
+<li><p><strong>drop_out</strong> (<em>float</em>) – drop out rate(default: <code class="docutils literal notranslate"><span class="pre">0.2</span></code>)</p></li>
+<li><p><strong>activate_func</strong> (<em>torch.nn.functional</em>) – activate function(default: <code class="docutils literal notranslate"><span class="pre">nn.ReLU()</span></code>)</p></li>
+<li><p><strong>batch_norm</strong> (<em>bool</em>) – whether use batch normalization(default: <code class="docutils literal notranslate"><span class="pre">False</span></code>)</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="gnnwr.networks.STPNN.forward">
+<span class="sig-name descname"><span class="pre">forward</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/gnnwr/networks.html#STPNN.forward"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gnnwr.networks.STPNN.forward" title="Link to this definition"></a></dt>
+<dd><p>Defines the computation performed at every call.</p>
+<p>Should be overridden by all subclasses.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Although the recipe for forward pass needs to be defined within
+this function, one should call the <code class="xref py py-class docutils literal notranslate"><span class="pre">Module</span></code> instance afterwards
+instead of this since the former takes care of running the
+registered hooks while the latter silently ignores them.</p>
+</div>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="gnnwr.networks.SWNN">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">gnnwr.networks.</span></span><span class="sig-name descname"><span class="pre">SWNN</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dense_layer</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">insize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">-1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">outsize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">-1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">drop_out</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">activate_func</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">PReLU(num_parameters=1)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">batch_norm</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/gnnwr/networks.html#SWNN"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gnnwr.networks.SWNN" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Module</span></code></p>
+<p>SWNN is a neural network with dense layers, which is used to calculate the spatial and temporal weight of features.
+| The each layer of SWNN is as follows:
+| full connection layer -&gt; batch normalization layer -&gt; activate function -&gt; drop out layer</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>dense_layer</strong> (<em>list</em>) – a list of dense layers of Neural Network</p></li>
+<li><p><strong>insize</strong> (<em>int</em>) – input size of Neural Network(must be positive)</p></li>
+<li><p><strong>outsize</strong> (<em>int</em>) – Output size of Neural Network(must be positive)</p></li>
+<li><p><strong>drop_out</strong> (<em>float</em>) – drop out rate(default: <code class="docutils literal notranslate"><span class="pre">0.2</span></code>)</p></li>
+<li><p><strong>activate_func</strong> (<em>torch.nn.functional</em>) – activate function(default: <code class="docutils literal notranslate"><span class="pre">nn.PReLU(init=0.1)</span></code>)</p></li>
+<li><p><strong>batch_norm</strong> (<em>bool</em>) – whether use batch normalization(default: <code class="docutils literal notranslate"><span class="pre">True</span></code>)</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="gnnwr.networks.SWNN.forward">
+<span class="sig-name descname"><span class="pre">forward</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/gnnwr/networks.html#SWNN.forward"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gnnwr.networks.SWNN.forward" title="Link to this definition"></a></dt>
+<dd><p>Defines the computation performed at every call.</p>
+<p>Should be overridden by all subclasses.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Although the recipe for forward pass needs to be defined within
+this function, one should call the <code class="xref py py-class docutils literal notranslate"><span class="pre">Module</span></code> instance afterwards
+instead of this since the former takes care of running the
+registered hooks while the latter silently ignores them.</p>
+</div>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="gnnwr.networks.default_dense_layer">
+<span class="sig-prename descclassname"><span class="pre">gnnwr.networks.</span></span><span class="sig-name descname"><span class="pre">default_dense_layer</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">insize</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">outsize</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/gnnwr/networks.html#default_dense_layer"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gnnwr.networks.default_dense_layer" title="Link to this definition"></a></dt>
+<dd><p>generate default dense layers for neural network</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>insize</strong> (<em>int</em>) – input size of neural network</p></li>
+<li><p><strong>outsize</strong> (<em>int</em>) – output size of neural network</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>dense_layer</strong> – a list of dense layers of neural network</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>list</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="gnnwr.networks.weight_share">
+<span class="sig-prename descclassname"><span class="pre">gnnwr.networks.</span></span><span class="sig-name descname"><span class="pre">weight_share</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/gnnwr/networks.html#weight_share"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#gnnwr.networks.weight_share" title="Link to this definition"></a></dt>
+<dd><p>weight_share is a function to calculate the output of neural network with weight sharing.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>model</strong> (<em>torch.nn.Module</em>) – neural network with weight sharing</p></li>
+<li><p><strong>x</strong> (<em>torch.Tensor</em>) – input of neural network</p></li>
+<li><p><strong>output_size</strong> (<em>int</em>) – output size of neural network</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>output</strong> – output of neural network</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>torch.Tensor</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="models.html" class="btn btn-neutral float-left" title="gnnwr.models module" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="utils.html" class="btn btn-neutral float-right" title="gnnwr.utils module" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2023, gnnwr.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
